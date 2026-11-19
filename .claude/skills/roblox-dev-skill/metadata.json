@@ -1,6 +1,11 @@
 {
   "skill_name": "roblox-dev-skill",
-  "version": "2.22.0",
+  "version": "2.22.0-local.1",
+  "local_update": {
+    "date": "2026-11-19",
+    "engine_version": "0.748.0.7481526",
+    "changes": "Local, not upstream. 0.746.0.7461264 -> 0.748.0.7481526 API dump diff (Roblox-Client-Tracker): +12/-2 classes, +57/-17/~28 members, +10 enums. Weekly notes 2026-11-09 and 2026-11-16 read. Tested in Studio 0.748: buffer vector functions are still nil; HandleAdornment.DoubleSided is public; DomainType is PascalCase (the old name resolves); UseHitbox and the TouchAndQuery enum now exist; Player:GetData and Workspace.ImprovedAnimationConstraint were removed. Luau 0.746/0.747 not reviewed (empty release bodies, GitHub rate limit). The ~/RobloxDocs local dump is not installed on this machine."
+  },
   "last_updated": "2026-11-07T17:00:00+07:00",
   "last_updated_by": "claude-code (Studio MCP Open Cloud + MCP Permissions, 17 first-party skills cross-checked, every not-enabled claim re-run in 0.746.0.7461269, creator-docs a47045f..031a0e3)",
   "update_source": "clientsettings client-version (WindowsStudio64, MacStudio, WindowsPlayer, MacPlayer); luau-lang/luau 0.745 release + 0.744/0.745 source tarballs; clientsettingscdn PCStudioApp/MacStudioApp/PCDesktopClient/MacDesktopClient/AndroidApp/iOSApp flags; roblox-api-monitor 0.745->0.746 dump diff (111 changes, 85 developer-visible); Roblox/creator-docs c8f5276..a47045f (2026-10-30..11-04); live Roblox Studio 0.746.0.7461264 via MCP (playtest probe Script/LocalScript/Actor, execute_luau) and the Rojo 34871 harness",

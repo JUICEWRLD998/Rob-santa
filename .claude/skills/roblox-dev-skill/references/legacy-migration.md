@@ -307,6 +307,40 @@ failure recovery. Data loss is irreversible.
 | Input Action System (IAS) full release | June 11 | `Workspace.PlayerScriptsUseInputActionSystem` — a Studio Properties-window setting. No script (MCP `execute_luau` included) can read or set it: it was `NotScriptable` until 0.742, and since 0.743 it is `RobloxScriptSecurity` ("lacking capability RobloxScript", Studio 0.743). See `references/project-structure.md` |
 | Roblox Connect calling APIs **SUNSET** | **July 15** | Remove usage before deadline |
 
+### November 2026 — engines 0.747.0.7471481 and 0.748.0.7481526 (local update, 2026-11-19)
+
+**Local addition, not upstream.** Written in the Rob Santa project on 2026-11-19, when the upstream
+skill was still at 2.22.0. Method: the 0.746.0.7461264 and 0.748.0.7481526 `API-Dump.json` from
+`MaximumADHD/Roblox-Client-Tracker` (Roblox's `DeployHistory.txt` now hides the build hashes), diffed with
+a local script whose self-diff gives 0 in every category. Result: 12 classes added, 2 removed; 57 members
+added, 17 removed, 28 changed; 10 enums added. Also read: the official weekly notes for the weeks of
+2026-11-09 and 2026-11-16 (`create.roblox.com/docs/en-us/updates/<date>.md`; the old
+`release-notes/release-notes-<N>.md` URLs now return 404). Every *(Studio)* row ran through MCP
+`execute_luau` in Studio 0.748.0.7481526 during a playtest (Server, and Client where noted). The
+Luau 0.746 and 0.747 GitHub releases have empty bodies, and the API rate limit stopped the commit
+diff, so the Luau changes in those versions were **not reviewed**.
+
+| Change | Result / Action |
+|---|---|
+| **`buffer.readvectorf32x2/x3`, `writevectorf32x2/x3`**: the 2026-11-09 weekly notes say "Implements", and they are listed as complete | **Still `nil`** on the Server and the Client *(Studio 0.748.0.7481526)*. A weekly-notes entry is not availability. Keep using `buffer.readf32` |
+| **`*HandleAdornment.DoubleSided`** (Box, Cone, Cylinder, Image, Pyramid, Sphere): `Hidden` + `RobloxScriptSecurity` → public | **Usable:** set it on a `BoxHandleAdornment` and read back `true` *(Studio)* |
+| **`Enum.DomainType` renamed to PascalCase:** `EXPERIENCE` → `Experience`, `OAUTH` → `OAuth`, and `+Group` | The old name **still resolves**: `Enum.DomainType.EXPERIENCE` returns `Enum.DomainType.Experience` *(Studio)*. Write the new names; compare enums, never their `tostring` |
+| `TeleportService:TeleportAsync` players parameter is now typed `{Player}`, not `{Instance}` | Type definitions only. The `--!strict` warning "Expected this to be exactly Instance, but got Player" goes away. Runtime is unchanged |
+| **`+TeleportOptions.ForcePublicServer`** (bool) | Settable *(Studio)*. Teleport behaviour not tested: teleports need a published game |
+| **`+DataModel.ServerRegion`** (string, ReadOnly) | Reads `""` in a Studio playtest. Test it in a live server before you use it |
+| **`+SocialService:PromptRateExperienceAsync()`** → `Enum.ExperienceRatingResult` (`Completed`, `Dismissed`, `NotAllowed`, `Failed`). Yields, capability `Social` | The method exists *(Studio)*. It was not called, because it opens a prompt. Expect a client-side call, and handle `NotAllowed` and `Failed` |
+| `Enum.AvatarSettingsHitAndTouchDetectionMode.UseHitbox`, `AvatarCollisionRules.HitboxSize`, `TouchAndQueryDetectionMode` (+ enum, 3 items) | **Now in the engine.** The enums resolve *(Studio)*, which corrects the 0.746 "not in the engine" row below. The old `HitAndTouchDetectionMode` property is now `Deprecated` + `RobloxScriptSecurity` (*dump*) |
+| **`+Lighting.LightAttenuationMode`** (`Legacy` / `Realistic`); write capability `PluginOrOpenCloud` | Reads `Legacy` *(Studio)*. Set it in the Properties window, not from a game script |
+| `+ColorCorrectionEffect.ColorLutContent` / `ColorLutIntensity` | The properties exist; `ColorLutIntensity` defaults to `1` *(Studio)*. Staff say colour LUTs are "coming soon", so the rendering is not verified |
+| **`+AudioStreamReader`, `+AudioStreamWriter`**: real-time audio analysis and synthesis in Luau (weekly notes 2026-11-09) | Creatable *(Studio)*. Members: `Read`, `Peek`, `SampleRate`, `WindowSize`, `Layout`, `SampleFormat`. Not exercised |
+| `+Humanoid:GetCanCollideOnDeath(part, fallback)` | Takes two arguments (a call without them fails `Argument 2 missing or nil` *(Studio)*) |
+| `+GeometryService:NegateAsync` / `SeparateAsync`, `+TextDocument:ReadAsync` | **Plugin-only** (`PluginOrOpenCloud`, *dump*) |
+| `+Folder.ExplorerIconContent`, `+Model.ExplorerIconContent`; `Enum.ImageCombineType` + `Darken`, `Lighten`, `Screen`, `Overlay`, `SoftLight`, `HardLight`, `Difference` | *Dump only* (the `Overlay` item resolves *(Studio)*) |
+| Write security dropped from `PluginSecurity` to `None`: `BaseWrap` / `WrapLayer` / `WrapTarget` cage and reference properties, `Decal` `MetalnessMap`/`NormalMap`/`RoughnessMap` (+`Content`), `VoiceChatService` `DefaultDistanceAttenuation`/`EnableDefaultVoice`/`UseAudioApi`, `Chat.LoadDefaultChat` | *Dump only.* This matches the docs pages that were "ahead of the engine" in 0.746 (row below). Re-test before you rely on a game-script write |
+| **Removed:** `Workspace.ImprovedAnimationConstraint` (a Script gets `not a valid member` *(Studio)*), `Player:GetData`, `PlayerDataRecord`, `PlayerDataRecordConfig`, `PlayerData:GetRecordAsync`, `PlayerDataService.LoadFailureBehavior`, `ParticleEmitter2D.LightEmission`, `WrapLayer.RotateScaleDeformationMap` / `ScaleOnlyDeformationMap`, the `AnimatedImageService` clip methods (moved to `AnimationClipProvider`, `RobloxScriptSecurity`) | `Player:GetData` errors `not a valid member` *(Studio)*. Use ProfileStore or `DataStoreService` for saves |
+| New services and classes `SessionStorage`, `FilePickerService`, `ModelInfoService`, `GameDownloaderService`, `Blob`, `PickedFile`, `SceneSnapshot`, `AvatarEffectDescription`, `FollowRotationBoneBehavior`, `FollowTwistBoneBehavior` | Not usable from game code: their members are `RobloxScriptSecurity`, or they are empty. `GetService("SessionStorage")` returns `nil` from a server *(Studio)* |
+| Roblox-internal (*dump only*): `AdService` rewarded-video callbacks, `CloudClientService` offers, `ExperienceService` probe methods, `Humanoid:PlayAvatarEffectAsync`, `Player:HasSpawnEffectPlayed`, new `Studio` settings | Ignore for game code: all are `RobloxScriptSecurity` |
+
 ### November 2026 — re-run of 2026-11-07 on 0.746.0.7461269 (an empty dump diff, and changed behaviour)
 
 **The dump diff from 0.746.0.7461264 to 0.746.0.7461269 has zero events, yet these results changed
@@ -331,7 +365,7 @@ or MCP `execute_luau`, and the probes were removed afterwards.
 |---|---|
 | **New page `studio/mcp-open-cloud`:** Open Cloud from an MCP client, with no API key | See `mcp-integration.md`. Run in Studio: `open_cloud_invoke`, the permission errors, and the HTTP gate on `execute_luau` |
 | **`Instance:QueryDescendants` gains `:in-radius(studs, selector)`**, and the `Collection` datatype page is rewritten | Both work *(Studio)*. See `performance-optimization.md`, which also covers `CollectionService:CreateCollection` |
-| **`buffer.readvectorf32x2`, `readvectorf32x3`, `writevectorf32x2`, `writevectorf32x3`** documented | **Not in the engine:** all four are `nil` from a Script and a LocalScript *(Studio 0.746.0.7461269)* |
+| **`buffer.readvectorf32x2`, `readvectorf32x3`, `writevectorf32x2`, `writevectorf32x3`** documented | **Not in the engine:** all four are `nil` from a Script and a LocalScript *(Studio 0.746.0.7461269)*. **Still `nil` in 0.748.0.7481526**, even though the 2026-11-09 weekly notes list them as implemented (local update) |
 | `GeometryService:SplitApartAsync`, `HapticEffect:GetWaveformKeys` documented | **Still refused:** `This API is not yet released!` and `GetWaveformKeys() is not yet enabled!` *(Studio)* |
 | `Player.DeviceTrustLevel` loses `Hidden` on its page; `UIGradient.Type` / `Scale` / `TileMode` and the `Workspace` streaming properties lose tags | These match the 0.746 dump. Nothing to migrate |
 | Place publishing (`cloud/guides/usage-place-publishing`) now uses the **Assets API** `Update Asset`: an API key with **assets** Read and Write, the Place ID as the asset ID, and an **Operation ID** to poll instead of an immediate version number | *Docs only.* Update a CI script that calls the old place publishing endpoint |
@@ -390,7 +424,7 @@ row below says which were run.
 | **`Camera.ProjectionType`, `OrthographicMode`, `OrthographicSize`, `ViewStretch`** and `Enum.ProjectionType` / `OrthographicMode` documented | **Still not enabled.** From a LocalScript each write is silently ignored: `Perspective`, `Vertical`, `35`, `1` read back *(Studio 0.746)*. `FFlagOrthographicCameraBetaFeature` is `True` for Studio and absent from player clients, so expect a Studio beta first. Do not build on it |
 | **`Color3:GetLuminance()`, `GetContrastRatio(other)`, `GetContrastingColor(...)`** documented | **Work** from a Script and a LocalScript *(Studio)*; see `ui-systems.md` |
 | `GuiObject.SelectionGained` / `SelectionLost` gain `inputDirection` (`Enum.GuiNavigationDirection`) | **Not in the engine:** the enum errors, and the handlers receive no arguments *(Studio 0.746)*. Do not read the parameter yet |
-| `Enum.AvatarSettingsHitAndTouchDetectionMode.UseHitbox`, a `HitboxSize` property on `AvatarCollisionRules`, new `Enum.AvatarSettingsTouchAndQueryDetectionMode` | **Not in the engine:** all three error *(Studio 0.746)*, and none is in the 0.746 dump |
+| `Enum.AvatarSettingsHitAndTouchDetectionMode.UseHitbox`, a `HitboxSize` property on `AvatarCollisionRules`, new `Enum.AvatarSettingsTouchAndQueryDetectionMode` | **Not in the engine:** all three error *(Studio 0.746)*, and none is in the 0.746 dump. **Superseded:** all three are in the 0.748 dump, and both enums resolve *(Studio 0.748, local update)* |
 | `Decal.MetalnessMapContent`, `NormalMapContent`, `RoughnessMapContent` (write → `None`), `VoiceChatService` properties (`None` + `PluginOrOpenCloud`) | **The pages are ahead of the engine.** The 0.746 dump still has `PluginSecurity`; a Script fails with `lacking capability Plugin` on all of them, `ColorMapContent` is writable, and `execute_luau` reads `EnableDefaultVoice` *(Studio)* |
 | `UserInputService:CreateVirtualInput(target?)`: "passing a non-`nil` `target` currently throws" | The 0.746 dump has no parameter, and a LocalScript passing a `ScreenGui` got a `VirtualInput` with no error *(Studio)*: the argument is ignored. Do not assume it targets the window |
 | `DataModel.ServerLowMemoryWarning` page: can fire more than once, no guarantee of shutdown or survival | See `performance-optimization.md`. The signal exists *(Studio)*; it cannot be triggered on demand, so a handler is untested here |
@@ -743,7 +777,7 @@ Modified return behavior. Check current documentation for updated return values.
 -- NEW: User data type (available now for early testing)
 local player: Player = ... -- from PlayerAdded
 local user = player.User
-print(user.DomainType)  -- Enum.DomainType.EXPERIENCE
+print(user.DomainType)  -- Enum.DomainType.Experience (renamed from EXPERIENCE in 0.748; the old name still resolves)
 print(user.DomainId)    -- Current Universe ID
 
 -- Convert legacy Global ID → User object

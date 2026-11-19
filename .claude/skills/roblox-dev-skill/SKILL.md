@@ -8,7 +8,7 @@ description: >
   and anti-exploit, deprecated APIs, Rojo, and the Roblox Studio MCP tools (execute_luau,
   multi_edit, script_read, open_cloud_invoke). It holds facts that general knowledge gets wrong (which properties a
   game Script may set, features that exist but are not enabled, Studio betas that cannot be
-  published, engine changes up to 0.746 and Luau up to 0.745) and worked examples tested in Studio, so consult
+  published, engine changes up to 0.748 and Luau up to 0.745) and worked examples tested in Studio, so consult
   it before answering from memory. Not for Lua outside Roblox (Redis, OpenResty, WoW addons, LOVE)
   or for other game engines.
 ---
@@ -19,6 +19,12 @@ Expert development companion for building Roblox experiences with Luau. Grounded
 official Roblox documentation (https://create.roblox.com/docs), the Luau language spec
 (https://luau.org), and the Roblox Lua Style Guide (https://roblox.github.io/lua-style-guide/).
 
+> **Local update 2026-11-19 (not upstream):** the API changes in Studio **0.747 and 0.748.0.7481526** were
+> diffed and tested in Studio 0.748. See the first November section of `references/legacy-migration.md`.
+> Watch for these: the `buffer` vector functions are still `nil`, and `*HandleAdornment.DoubleSided`
+> is now public. `Enum.DomainType` uses PascalCase, and `Player:GetData` was removed. The Luau 0.746 and
+> 0.747 changes were not reviewed. Everything below describes the upstream 2.22.0 baseline.
+>
 > **Engine**: Roblox Studio **0.746.0.7461269** with **Luau 0.745** (released 2026-10-30) — dump
 > downloaded, re-split, and diffed against 0.745 on **2026-11-05**, with every developer-visible
 > change run in Studio 0.746. 950 classes / 656 enums; locally, 267 class files named `*Service`
