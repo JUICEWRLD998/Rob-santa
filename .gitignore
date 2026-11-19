@@ -1,0 +1,7 @@
+# Tool binaries and downloads (re-fetch with the versions listed in CLAUDE.md)
+tools/bin/
+tools/dl/
+tools/types/
+# Generated
+sourcemap.json
+roblox.yml

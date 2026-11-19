@@ -32,6 +32,13 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 
 - Parts, models, UI and sounds live in the **place file**, not on disk. After world/UI edits, `save_place`.
 
+## Skills and static checks (installed 2026-11-19)
+- **Project skills** in `.claude/skills/` (load them by name for any Roblox work):
+  - `roblox-dev-skill` (MSayib, v2.22.0, MIT): verified Luau/Roblox API facts, security, ProfileStore, ProcessReceipt, Studio MCP limits. Its version line is a date, not today's engine version.
+  - `roblox-simulator-economy` (gamedev-skills, Apache-2.0): cost curves, income/sec, offline earnings; run its calculator with `tools/bin/lune.exe run .claude/skills/roblox-simulator-economy/scripts/balance.luau <file.json>`.
+- **Roblox's own skills** come through the Studio MCP `skill` tool (`list_skills` lists them). Use `rbx-permissions` before DataStore or Open Cloud work, `rbx-device-simulator-lua` for phone checks, `rbx-unit-test` for module tests, `rbx-instrument-analytics` for the tutorial funnel. `rbx-open-cloud-usage` can create passes/products, which still needs his explicit go.
+- **Before every playtest** that follows a script change: `bash tools/check.sh` (selene lint + luau-lsp type check over `src/`, using a sourcemap built from the Script Sync table). Fix what it reports first. Verified 2026-11-19 with planted errors: luau-lsp catches type errors and deprecated `wait()`; selene catches unused and undefined variables but does NOT flag `wait()`, so both are needed. `require()` path resolution through the generated sourcemap is not yet proven (no modules existed); check it at step 1.2. Tools live in `tools/bin/` (gitignored): selene 0.32.0, luau-lsp 1.70.1, lune 0.11.1, from each project's GitHub releases.
+
 ## Architecture
 ```
 src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.luau (remote names), Types.luau
