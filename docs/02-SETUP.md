@@ -145,7 +145,7 @@ Then open **Studio Settings** (Alt+S), search "sync", and turn on **Auto resume 
 ### 6d. Test it
 Ask Claude:
 ```
-Create src/server/Hello.server.luau that prints "Hello from the server!" when the game starts. Then start a playtest with the MCP, read the console output, stop the playtest, and tell me if the message appeared.
+Create src/server/ServerScriptService/Server/Hello.server.luau that prints "Hello from the server!" when the game starts. Then start a playtest with the MCP, read the console output, stop the playtest, and tell me if the message appeared.
 ```
 You should see `Hello` appear under ServerScriptService → Server in Explorer, and the message in Output.
 

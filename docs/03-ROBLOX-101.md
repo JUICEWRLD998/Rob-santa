@@ -154,7 +154,7 @@ Errors show in **Output** in red, like:
 ServerScriptService.Server.Services.PresentService:57: attempt to index nil with 'Position'
 ```
 
-- `ServerScriptService.Server.Services.PresentService` = which script (`src/server/Services/PresentService.luau`)
+- `ServerScriptService.Server.Services.PresentService` = which script (`src/server/ServerScriptService/Server/Services/PresentService.luau`; Script Sync adds the service-name folders, see CLAUDE.md)
 - `57` = line number
 - the rest = what went wrong ("attempt to index nil" means "you asked for something that doesn't exist")
 

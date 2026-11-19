@@ -66,10 +66,11 @@ describe the layout to me.
 ### 1.2 Code foundation
 **Prompt:**
 ```
-Set up the code foundation described in CLAUDE.md: src/shared/Config.luau (every number from
-docs/01-GAME-DESIGN.md), src/shared/Toys.luau (the toy list), src/shared/Remotes.luau,
-src/server/Main.server.luau that loads every module in src/server/Services, and
-src/client/Main.local.luau that loads every module in src/client/Controllers.
+Set up the code foundation described in CLAUDE.md, using the full Script Sync paths from its table:
+Config.luau (every number from docs/01-GAME-DESIGN.md), Toys.luau (the toy list) and Remotes.luau
+in src/shared/ReplicatedStorage/Shared/; Main.server.luau in src/server/ServerScriptService/Server/
+that loads every module in its Services folder; and Main.local.luau in src/client/Client/ that loads
+every module in its Controllers folder.
 Add a temporary "Coins" leaderstat. Playtest, check Output has no errors, and explain in
 5 lines how the pieces connect.
 ```
@@ -127,7 +128,7 @@ label (top centre). All money changes happen on the server only.
 ### 2.4 Security check
 **Prompt:**
 ```
-Review every RemoteEvent handler in src/server. For each one, tell me what an exploiter could send
+Review every RemoteEvent handler in src/server/ServerScriptService/Server/. For each one, tell me what an exploiter could send
 and confirm the server rejects it (wrong distance, not their hideout, spam, fake ids). Fix anything weak.
 ```
 **Done when:** Claude lists each remote with its checks, and nothing trusts the client.
@@ -209,7 +210,7 @@ Claude changes the numbers in `Config.luau`.
 ### 4.1 Saving with ProfileStore
 **Prompt:**
 ```
-Add the ProfileStore library (by loleris, official GitHub release) at src/server/Lib/ProfileStore.luau.
+Add the ProfileStore library (by loleris, official GitHub release) at src/server/ServerScriptService/Server/Lib/ProfileStore.luau.
 Build DataService that saves and loads per player: coins, coal, shelved toys (toy id + mutation +
 shelf slot), upgrade levels, zones owned, index entries, advent doors opened, login streak, last
 login time. Pay offline earnings on join (cap from Config). Replace the temporary leaderstat with

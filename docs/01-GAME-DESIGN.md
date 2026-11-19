@@ -2,7 +2,7 @@
 
 This is the source of truth for **what** the game is. Claude reads this before building any feature. If you change your mind about a rule, change it here first, then build.
 
-All numbers are **starting values**. They live in one code file (`src/shared/Config.luau`), so you can tune them later without touching game logic.
+All numbers are **starting values**. They live in one code file (`src/shared/ReplicatedStorage/Shared/Config.luau`), so you can tune them later without touching game logic.
 
 ---
 

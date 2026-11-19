@@ -91,7 +91,7 @@ Press **Shift+Tab** in Claude Code to switch to Plan Mode for big steps (guards,
 1. **One step per message.** Two features at once = twice the bugs and no idea which one broke.
 2. **Commit after every working step** (`commit this`). Commits are your undo button.
 3. **Never let the same bug go 3 rounds.** On the 3rd try say: `Stop. Find the root cause before changing anything else.`
-4. **Numbers live in Config.** If you say "make elves slower", the change should be one number in `src/shared/Config.luau`.
+4. **Numbers live in Config.** If you say "make elves slower", the change should be one number in `src/shared/ReplicatedStorage/Shared/Config.luau`.
 5. **Save the place** after world changes. Claude can do it through the MCP (`save the place`). Scripts are safe on disk; parts and models only live in the place file.
 6. **Fresh context between phases.** Type `/clear` when you start a new phase; the docs and CLAUDE.md bring Claude back up to speed.
 7. **Keep README progress ticked.** Claude reads it to know where you are.
