@@ -284,8 +284,10 @@ local function returnToZone(present: Present)
 	end
 end
 
--- Takes the present off the carrier and leaves it on the ground below them.
-local function drop(present: Present, player: Player)
+-- Takes the present off the carrier and leaves it on the ground below where it was.
+-- `character` is the body it rode on. Don't use player.Character here: by CharacterRemoving
+-- time it can already be the NEW character standing at the spawn (found in the 2.1 playtest).
+local function drop(present: Present, player: Player, character: Model?)
 	local list = carriedBy[player]
 	if list then
 		local index = table.find(list, present)
@@ -299,9 +301,7 @@ local function drop(present: Present, player: Player)
 	end
 
 	local box = present.box
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local from = if root and root:IsA("BasePart") then root.Position else box.Position
+	local from = box.Position -- it rode on the carrier's back, so this is where they were
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	local exclude: { Instance } = { folder }
@@ -320,13 +320,13 @@ local function drop(present: Present, player: Player)
 	present.returnTimer = task.delay(Config.Presents.DroppedReturnSeconds, returnToZone, present)
 end
 
-local function dropAll(player: Player)
+local function dropAll(player: Player, character: Model?)
 	local list = carriedBy[player]
 	if not list or #list == 0 then
 		return
 	end
 	for _, present in table.clone(list) do
-		drop(present, player)
+		drop(present, player, character)
 	end
 	refreshCarrier(player)
 end
@@ -340,7 +340,7 @@ local function watchCharacter(player: Player, character: Model)
 	table.insert(
 		connections,
 		humanoid.Died:Connect(function()
-			dropAll(player)
+			dropAll(player, character)
 		end)
 	)
 end
@@ -360,8 +360,8 @@ local function onPlayerAdded(player: Player)
 	)
 	table.insert(
 		connections,
-		player.CharacterRemoving:Connect(function()
-			dropAll(player)
+		player.CharacterRemoving:Connect(function(character)
+			dropAll(player, character)
 		end)
 	)
 	local character = player.Character
@@ -372,7 +372,7 @@ local function onPlayerAdded(player: Player)
 end
 
 local function onPlayerRemoving(player: Player)
-	dropAll(player)
+	dropAll(player, player.Character)
 	local connections = playerConnections[player]
 	if connections then
 		for _, connection in connections do
@@ -469,7 +469,7 @@ function PresentService:ReturnCarried(player: Player)
 		return
 	end
 	for _, present in table.clone(list) do
-		drop(present, player)
+		drop(present, player, player.Character)
 		if present.returnTimer then
 			task.cancel(present.returnTimer)
 		end
