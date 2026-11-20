@@ -1,1 +1,3 @@
 std = "roblox"
+# Vendored third-party code (ProfileStore by loleris): not ours to lint.
+exclude = ["src/server/ServerScriptService/Server/Lib/ProfileStore.luau"]

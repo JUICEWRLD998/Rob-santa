@@ -146,6 +146,7 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 ### Shelves
 - Start with 4 shelves. Buy more, up to 20. Cost: `500 × 1.8^(shelves bought)`.
 - Toys earn while you're offline, up to **2 hours** of income (4 hours with VIP). It's paid when you rejoin.
+- Saving (step 4.1): toys waiting on the unwrap table are saved too, not only shelved ones, so nothing is lost on rejoin. Offline time counts from the last save (every 5 minutes and on leaving). A saved toy whose shelf slot no longer exists goes back to the table.
 
 ### Collection Index
 - A book listing every toy × every mutation. Discovering a new entry pays a one-time coin bonus.

@@ -130,6 +130,9 @@ local Config = {
 	-- game ignores them completely.
 	Debug = {
 		OpenZonesInStudio = true, -- Zone 2/3 barriers walk-through in Studio playtests (until 4.2 unlocks)
+		-- ServerStorage/DebugData (a BindableFunction) lets Claude's Studio tests read a player's
+		-- save and set a field in it. Server-only: players can never reach ServerStorage.
+		DataHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.

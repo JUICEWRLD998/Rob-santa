@@ -52,7 +52,8 @@ src/server/  Main.server.luau (requires each module in Services/ and calls :Init
                         ShopService, EventService, MonetizationService, AdventService, TutorialService,
                         ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only)
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
-             Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (Phase 4)
+             Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (4.1, vendored: loleris
+             v1.0.3, commit 45c9847; no GitHub releases exist. selene.toml and check.sh skip it)
 src/client/  Main.local.luau (requires each module in Controllers/)
              Controllers/  HudController, PresentController, RevealController, OwnerPromptController,
                            DisguiseController,
@@ -63,7 +64,8 @@ Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by Guard
 (elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
 StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
 Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond,
-Jailed (3.3), Coal (3.3; not saved until Phase 4). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden
+Jailed (3.3), Coal (3.3). Coins/Coal (and the Coins leaderstat) are display copies EconomyService writes
+from the saved data (4.1). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden
 Panel.BailOutButton slot for Phase 6 (JailService:Release is the hook).
 Zone edges: each zone has a ZoneVolume part tagged ZoneArea; elves never chase past it.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
@@ -75,7 +77,8 @@ Workspace/Map (place file): world, with CollectionService tags + attributes for 
 - Remotes are created by the server at boot under `ReplicatedStorage/Remotes`; the client uses `WaitForChild`.
 - **All numbers in `Config.luau`.** "Make elves slower" should be a one-number change.
 - Find gameplay spots by CollectionService tags (PresentSpawn, ElfWaypoint, DropMat, ShelfSlot, Barrier, CoalRock...) with attributes (Zone, Route, Index). Never by hard-coded paths into the map.
-- **Data:** only `DataService` touches persistence, through ProfileStore (session-locked). Never call DataStoreService elsewhere.
+- **Data:** only `DataService` touches persistence, through ProfileStore (session-locked). Never call DataStoreService elsewhere. Other services change `DataService:GetData(player)` in place (nil until loaded; wait with `WaitForData` or `OnLoaded`). A new saved field goes into DataService's `PlayerData` type and `TEMPLATE`; `Reconcile()` adds it to old saves.
+- **`execute_luau` gets its own copy of every ModuleScript** (2026-11-20, step 4.1). `require(...DataService)` from a test returned an empty module (`GetData` = nil) while the game's copy had the player loaded. To read or seed live state, use a Studio-only BindableFunction the game creates: `ServerStorage.DebugData:Invoke("get", player)` / `("set", player, field, value)` (Config.Debug.DataHookInStudio). Instances and attributes are shared; module tables are not.
 - **Purchases:** `ProcessReceipt` must grant each purchase exactly once (record the PurchaseId in the profile before returning PurchaseGranted).
 - **Paid random items:** Lucky Wrap changes a random roll, so treat it as a paid random item. Show the odds in the UI before purchase, and check `PolicyService:GetPolicyInfoForPlayerAsync(...).ArePaidRandomItemsRestricted`. Hide the product where it's restricted.
 - NPC guards: server network ownership, own collision group, PathfindingService for chases, raycast line-of-sight, vision checks ~5×/sec (not every frame).

@@ -8,9 +8,13 @@
 --   the table at once.
 -- * Only the owner can use these prompts. The server checks owner, distance and that the toy is
 --   still where the prompt says; the client also hides other players' prompts (OwnerOnly tag).
--- TEMPORARY: nothing is saved yet. Leaving loses your toys until Phase 4 (DataService).
+-- * Saving (step 4.1): every change to the table or shelves is copied into the player's data
+--   (DataService), and the toys come back when they rejoin. Shelves also pay for the time the
+--   player was away, up to Config.Offline.MaxHours. A shelf slot that no longer exists sends its
+--   toy back to the table instead of losing it.
 
 local CollectionService = game:GetService("CollectionService")
+local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -19,6 +23,7 @@ local ToyMath = require(ReplicatedStorage.Shared.ToyMath)
 local Toys = require(ReplicatedStorage.Shared.Toys)
 local Types = require(ReplicatedStorage.Shared.Types)
 local ToyModel = require(script.Parent.Parent.Lib.ToyModel)
+local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local PlotService = require(script.Parent.PlotService)
 
@@ -112,6 +117,50 @@ local function buildWithPrompt(
 	return model
 end
 
+-- Copies the table and shelves into the player's data; DataService saves it to Roblox.
+local function saveToys(player: Player, state: State)
+	local data = DataService:GetData(player)
+	if not data then
+		return
+	end
+	local shelves: { DataService.SavedShelfToy } = {}
+	for slot, entry in state.shelves do
+		local mutation: string? = entry.owned.mutation -- stored as plain text
+		table.insert(shelves, { slot = slot, toyId = entry.owned.toyId, mutation = mutation })
+	end
+	table.sort(shelves, function(a, b)
+		return a.slot < b.slot
+	end)
+	local tableToys: { DataService.SavedTableToy } = {}
+	for _, entry in state.waiting do
+		local mutation: string? = entry.owned.mutation
+		table.insert(tableToys, { toyId = entry.owned.toyId, mutation = mutation })
+	end
+	data.shelves = shelves
+	data.tableToys = tableToys
+end
+
+-- A saved mutation name back to a Mutation; nil if it's missing or no longer exists.
+local function toMutation(name: string?): Types.Mutation?
+	for _, entry in Config.Mutations do
+		if entry.name == name then
+			return entry.name
+		end
+	end
+	return nil
+end
+
+-- A saved toy back to an Entry; nil (with a warning) if the toy id no longer exists.
+local function toEntry(player: Player, toyId: string, mutation: string?): Entry?
+	local def = Toys.get(toyId)
+	if not def then
+		warn(`[ShelfService] {player.Name} has a saved toy "{toyId}" that is not in Toys.luau; skipped`)
+		return nil
+	end
+	local owned: Types.OwnedToy = { uid = HttpService:GenerateGUID(false), toyId = toyId, mutation = toMutation(mutation) }
+	return { owned = owned, def = def, model = nil }
+end
+
 local function displayName(entry: Entry): string
 	return if entry.owned.mutation then `{entry.owned.mutation} {entry.def.name}` else entry.def.name
 end
@@ -130,6 +179,7 @@ local function sellShelved(player: Player, slot: number, entry: Entry)
 	end
 	state.shelves[slot] = nil
 	destroyModel(entry)
+	saveToys(player, state)
 	local price = ToyMath.sellPrice(entry.owned.toyId, entry.owned.mutation)
 	if price > 0 then
 		EconomyService:AddCoins(player, price)
@@ -194,6 +244,7 @@ local function placeOnShelf(player: Player, entry: Entry)
 	showOnShelf(player, state, slot, entry)
 	layoutTable(player, state)
 	refreshIncome(player, state)
+	saveToys(player, state)
 end
 
 -- Shows the oldest ToysShownOnTable waiting toys in a row on the table; the rest wait unseen.
@@ -244,6 +295,7 @@ local function sellAllWaiting(player: Player, market: BasePart)
 		destroyModel(entry)
 	end
 	state.waiting = {}
+	saveToys(player, state)
 	if total > 0 then
 		EconomyService:AddCoins(player, total)
 	end
@@ -266,19 +318,75 @@ local function applyShelfLook(index: number, active: number?)
 	end
 end
 
+-- Puts the saved toys back: each on its shelf slot, or on the table if that slot is gone.
+local function restoreToys(player: Player, state: State, data: DataService.PlayerData)
+	for _, saved in data.shelves do
+		local entry = toEntry(player, saved.toyId, saved.mutation)
+		if not entry then
+			continue
+		end
+		local slot = saved.slot
+		local fits = slot >= 1 and slot <= state.activeShelves and state.shelves[slot] == nil
+		if fits and slotPart(state, slot) then
+			state.shelves[slot] = entry
+			showOnShelf(player, state, slot, entry)
+		else
+			table.insert(state.waiting, entry)
+		end
+	end
+	for _, saved in data.tableToys do
+		local entry = toEntry(player, saved.toyId, saved.mutation)
+		if entry then
+			table.insert(state.waiting, entry)
+		end
+	end
+	layoutTable(player, state)
+	saveToys(player, state)
+end
+
+local function formatDuration(seconds: number): string
+	local hours = seconds // 3600
+	local minutes = (seconds % 3600) // 60
+	if hours > 0 then
+		return `{hours}h {minutes}m`
+	end
+	return `{math.max(minutes, 1)}m`
+end
+
+-- Pays the shelves' income for the time the player was away, up to the offline cap.
+-- (VIP's longer cap, Config.Offline.MaxHoursVip, is added with game passes in Phase 6.)
+local function payOffline(player: Player, state: State)
+	local away = DataService:TakeOfflineSeconds(player)
+	local paidSeconds = math.min(away, Config.Offline.MaxHours * 3600)
+	local coins = math.floor(incomeOf(state) * paidSeconds)
+	if coins > 0 and EconomyService:AddCoins(player, coins) then
+		message(player, `Welcome back! Your shelves earned {coins} coins while you were away ({formatDuration(paidSeconds)})`)
+	end
+end
+
+-- Called (in its own thread) when the player gets a hideout. Waits for their save to load, then
+-- puts their toys back and pays offline earnings.
 local function onAssigned(player: Player, index: number)
 	if stateOf[player] then
 		return
 	end
-	stateOf[player] = {
+	local data = DataService:WaitForData(player)
+	-- They may have left, or been moved to another hideout, while the save loaded.
+	if not data or stateOf[player] or PlotService:GetHideoutIndex(player) ~= index then
+		return
+	end
+	local state: State = {
 		index = index,
 		waiting = {},
 		shelves = {},
-		activeShelves = Config.Shelves.Start,
+		activeShelves = math.min(Config.Shelves.Start + data.shelvesBought, Config.Shelves.Max),
 		incomeCarry = 0,
 	}
-	applyShelfLook(index, Config.Shelves.Start)
-	player:SetAttribute("IncomePerSecond", 0)
+	stateOf[player] = state
+	applyShelfLook(index, state.activeShelves)
+	restoreToys(player, state, data)
+	refreshIncome(player, state)
+	payOffline(player, state)
 end
 
 local function onReleased(player: Player, index: number)
@@ -375,6 +483,7 @@ function ShelfService:AddUnwrapped(player: Player, owned: Types.OwnedToy): boole
 	end
 	table.insert(state.waiting, { owned = owned, def = def, model = nil })
 	layoutTable(player, state)
+	saveToys(player, state)
 	return true
 end
 
