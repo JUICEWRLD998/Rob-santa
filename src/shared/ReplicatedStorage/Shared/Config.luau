@@ -91,6 +91,8 @@ local Config = {
 	-- Section 4: guards.
 	Guards = {
 		PatrolWalkSpeed = 8,
+		PatrolPauseSeconds = 1.2, -- (my pick) stands still at each waypoint, like it's looking around
+		PatrolStuckSeconds = 2, -- (my pick) no progress for this long = blocked: path around the obstacle
 		ChaseMaxSeconds = 8,
 		GiveUpAfterLostSightSeconds = 3,
 		VisionChecksPerSecond = 5,
