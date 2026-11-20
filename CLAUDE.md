@@ -62,7 +62,10 @@ src/client/  Main.local.luau (requires each module in Controllers/)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, temporary R15 rig, no scripts), later snowman
 Workspace/Guards: live elves, created by GuardService at boot (collision group "Elves")
 StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
-Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond.
+Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond,
+Jailed (3.3), Coal (3.3; not saved until Phase 4). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden
+Panel.BailOutButton slot for Phase 6 (JailService:Release is the hook).
+Zone edges: each zone has a ZoneVolume part tagged ZoneArea; elves never chase past it.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
 Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and
 Studio stores LF, so compare `tr -d '\r' < file | wc -c`.
