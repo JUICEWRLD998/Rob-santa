@@ -23,8 +23,11 @@ local function apply(player: Player)
 		return
 	end
 	local speed = Config.Player.WalkSpeed
-	for _, amount in modifiersOf[player] or {} do
-		speed += amount
+	local modifiers = modifiersOf[player]
+	if modifiers then
+		for _, amount in modifiers do
+			speed += amount
+		end
 	end
 	humanoid.WalkSpeed = math.max(speed, MIN_WALK_SPEED)
 end
@@ -70,7 +73,11 @@ function MovementService:SetModifier(player: Player, name: string, amount: numbe
 		modifiers = {}
 		modifiersOf[player] = modifiers
 	end
-	modifiers[name] = if amount and amount ~= 0 then amount else nil
+	if amount == nil or amount == 0 then
+		modifiers[name] = nil
+	else
+		modifiers[name] = amount
+	end
 	apply(player)
 end
 
