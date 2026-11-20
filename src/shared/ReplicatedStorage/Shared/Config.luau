@@ -64,6 +64,11 @@ local Config = {
 		CarryCapacity = 1,
 		CarryCapacityBigSack = 2,
 		UnwrapSeconds = 2,
+		GrabDistance = 8, -- (my pick) ProximityPrompt range, studs
+		GrabDistanceSlack = 4, -- (my pick) extra studs the server allows for lag before refusing a grab
+		DeliveryCheckSeconds = 0.2, -- (my pick) how often the server checks carriers against their drop mat
+		DeliveryMatHeight = 8, -- (my pick) studs above the drop mat that still count as standing on it
+		ToysShownOnTable = 4, -- (my pick) unplaced toys displayed on the unwrap table (step 2.3 moves them)
 	},
 
 	-- Section 4: guards.

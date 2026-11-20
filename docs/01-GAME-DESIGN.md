@@ -117,6 +117,8 @@ This is the moment the trailer, thumbnail and TikToks are built around. Spend po
 
 You can see a present's wrapping colour before you grab it. Better wrapping in the same zone means a better roll. The roll itself always happens on the server.
 
+How this works in code (decided 2026-11-20, step 2.1): the wrapping **is** the rarity. The server rolls the rarity from the zone table when the present spawns, and colours the wrapping to match (docs/04: one wrapping colour per rarity). Hold time and carry slowdown come from that rarity. At unwrap the server picks which toy of that rarity you get (equal chance per toy) and rolls the mutation. Lucky Wrap moves the unwrap one rarity up.
+
 ### Rarity values
 
 | Rarity | Coins/sec on shelf | Sell price | Carry slowdown | Example toys (original names) |
