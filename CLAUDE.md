@@ -42,19 +42,25 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 
 ## Architecture
 ```
-src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.luau (remote names), Types.luau
+src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.luau (remote names), Types.luau,
+             ToyMath.luau (income and sell price, shared so server and UI agree)
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
                         ShopService, EventService, MonetizationService, AdventService, TutorialService
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
-             Lib/ProfileStore.luau
+             Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (Phase 4)
 src/client/  Main.local.luau (requires each module in Controllers/)
-             Controllers/  HudController, PresentController, RevealController, DisguiseController,
+             Controllers/  HudController, PresentController, RevealController, OwnerPromptController,
+                           DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController
 ServerStorage/Templates (place file): Present, Toy (built in 2.1/2.2), later elf and snowman models
-StarterGui (place file): RevealGui (2.2); controllers fill and animate it, they don't build it
+StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
+Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond.
+Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
+Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and
+Studio stores LF, so compare `tr -d '\r' < file | wc -c`.
 Workspace/Map (place file): world, with CollectionService tags + attributes for gameplay spots
 ```
 - **Server-authoritative, always.** The client only sends intents through RemoteEvents. The server validates every remote: player state, distance, ownership, cooldowns, rate limits, and argument types. Coins, rolls, steals, sells, unlocks, jail and purchases happen only on the server.

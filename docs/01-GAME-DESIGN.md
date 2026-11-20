@@ -132,6 +132,8 @@ How this works in code (decided 2026-11-20, step 2.1): the wrapping **is** the r
 
 Sell price = 45 seconds of shelf income. Keep good toys on shelves and sell the weak ones when shelves are full. That's the constant small decision.
 
+Selling (step 2.3): a mutation multiplies the sell price too, since it multiplies income (a Golden Common sells for 45 × 5 = 225). Unwrapped toys wait on your unwrap table. From there you put one on your first free shelf (prompt), or sell everything on the table at the Black Market in the Town Square. Each shelved toy has its own Sell prompt.
+
 ### Mutations (rolled at unwrap, at most one)
 
 | Mutation | Chance | Income × | Look |

@@ -30,6 +30,16 @@ local hideouts: { Hideout } = {} -- sorted by index
 local hideoutOf: { [Player]: Hideout } = {}
 local spawnConnections: { [Player]: RBXScriptConnection } = {}
 
+type Listener = (player: Player, index: number) -> ()
+local assignedListeners: { Listener } = {}
+local releasedListeners: { Listener } = {}
+
+local function notify(listeners: { Listener }, player: Player, index: number)
+	for _, listener in listeners do
+		task.spawn(listener, player, index)
+	end
+end
+
 -- The tagged instance in Workspace whose Hideout attribute equals `index`.
 local function findTagged(tag: string, index: number): Instance?
 	for _, instance in CollectionService:GetTagged(tag) do
@@ -106,6 +116,7 @@ local function assign(player: Player)
 	if character then
 		task.spawn(moveToHideout, player, character)
 	end
+	notify(assignedListeners, player, free.index)
 end
 
 local function release(player: Player)
@@ -122,6 +133,7 @@ local function release(player: Player)
 	hideout.owner = nil
 	hideout.model:SetAttribute(OWNER_ATTRIBUTE, nil)
 	setSign(hideout, FREE_SIGN_TEXT)
+	notify(releasedListeners, player, hideout.index)
 end
 
 function PlotService:Init()
@@ -186,6 +198,17 @@ function PlotService:GetOwner(index: number): Player?
 		end
 	end
 	return nil
+end
+
+-- Calls `listener(player, hideoutIndex)` each time a player is given a hideout.
+-- Register in Init: assignments start in Start, so nothing is missed.
+function PlotService:OnAssigned(listener: Listener)
+	table.insert(assignedListeners, listener)
+end
+
+-- Calls `listener(player, hideoutIndex)` each time a player's hideout is freed (they left).
+function PlotService:OnReleased(listener: Listener)
+	table.insert(releasedListeners, listener)
 end
 
 -- Moves the player's current character into their hideout (e.g. after jail). No-op if not spawned.
