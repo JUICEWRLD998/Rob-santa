@@ -56,6 +56,21 @@ function EconomyService:AddCoins(player: Player, amount: number): boolean
 	return true
 end
 
+-- Coal: mined in Naughty Jail, kept forever, spent later on Naughty gadgets and Advent doors.
+-- TEMPORARY like coins: a player attribute that starts at 0 and is NOT saved until Phase 4.
+function EconomyService:GetCoal(player: Player): number
+	local coal = player:GetAttribute("Coal")
+	return if type(coal) == "number" then coal else 0
+end
+
+function EconomyService:AddCoal(player: Player, amount: number): boolean
+	if amount ~= amount or amount <= 0 or amount ~= math.floor(amount) or amount == math.huge then
+		return false
+	end
+	player:SetAttribute("Coal", EconomyService:GetCoal(player) + amount)
+	return true
+end
+
 -- Spends coins only if the player can afford it. Check and spend happen with no yield between.
 function EconomyService:TrySpend(player: Player, amount: number): boolean
 	local coins = coinsValue(player)

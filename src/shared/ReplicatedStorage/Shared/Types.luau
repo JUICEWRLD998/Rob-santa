@@ -32,6 +32,18 @@ export type UnwrapResult = {
 	mutation: Mutation?,
 }
 
+-- Sent server -> client on JailUpdate.
+--   Caught: play the "NAUGHTY!" stamp. Jailed: show the panel (endsAt is server time, from
+--   workspace:GetServerTimeNow()). Free: hide everything.
+export type JailState = "Caught" | "Jailed" | "Free"
+export type JailUpdate = {
+	state: JailState,
+	endsAt: number?,
+	coal: number?, -- mined this visit
+	coalNeeded: number?,
+	mined: { number }?, -- CoalRock Index values already mined this visit (their prompts hide)
+}
+
 -- The contract every server Service and client Controller module follows.
 -- Init runs for all modules first (set up state, no yielding); Start runs after (may yield).
 export type Module = {

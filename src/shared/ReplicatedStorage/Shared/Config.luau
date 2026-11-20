@@ -100,7 +100,7 @@ local Config = {
 		ChaseTickSeconds = 0.2, -- (my pick) how often a chasing elf re-aims at you
 		CatchDistance = 3.5, -- (my pick) studs between elf and player that count as "touching"
 		HeyShowSeconds = 1.2, -- (my pick) "HEY!" over its head, then just "!" for the rest of the chase
-		CaughtIgnoreSeconds = 5, -- TEMPORARY until jail (3.3): after a catch the elf ignores you this long
+		CaughtIgnoreSeconds = 5, -- after a catch the elf ignores you this long (covers the stamp moment)
 		GiveUpCooldownSeconds = 3, -- (my pick) after a chase ends the elf ignores that player this long,
 		-- or the 8 s chase limit means nothing: it would re-spot you the same instant (found in 3.2 testing)
 		ConeSlices = 8, -- (my pick) triangles per floor cone; more = smoother edge
@@ -157,6 +157,10 @@ local Config = {
 	Jail = {
 		WaitSeconds = 20,
 		CoalToEscape = 8,
+		StampSeconds = 1.5, -- (my pick) the "NAUGHTY!" stamp plays this long, then you're in the cell
+		MineHoldSeconds = 0.5, -- (my pick) hold time on a coal rock's "Mine" prompt
+		MinePromptDistance = 8, -- (my pick) studs
+		MinePromptDistanceSlack = 4, -- (my pick) extra studs the server allows for lag
 	},
 
 	-- Section 9: social and events.
