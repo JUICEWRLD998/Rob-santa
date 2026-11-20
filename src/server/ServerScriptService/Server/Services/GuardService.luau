@@ -19,6 +19,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local DisguiseService = require(script.Parent.DisguiseService)
 local JailService = require(script.Parent.JailService)
 
 local ELF_GROUP = "Elves"
@@ -349,7 +350,8 @@ local function findVisiblePlayer(elf: Elf): Player?
 	for _, player in Players:GetPlayers() do
 		local ignoredUntil = elf.ignoreUntil[player]
 		local target = liveTarget(player)
-		if target and not (ignoredUntil and now < ignoredUntil) then
+		-- A patrolling elf walks right past a still gift box (a disguised player is always still).
+		if target and not (ignoredUntil and now < ignoredUntil) and not DisguiseService:IsDisguised(player) then
 			local position = target.root.Position
 			if
 				insideZone(elf.zone, position)
@@ -484,6 +486,69 @@ local function onCaught(elf: Elf, player: Player)
 	JailService:Jail(player)
 end
 
+-- Puts words over the elf's head (the same sign as "HEY!").
+local function say(elf: Elf, text: string)
+	if elf.alert then
+		elf.alert.Enabled = true
+	end
+	if elf.alertText then
+		elf.alertText.Text = text
+	end
+end
+
+-- The disguise moment (section 5). The player turned into a gift box mid-chase: walk to the box,
+-- stop, face it and sniff for InspectSeconds.
+--   Fooled  = they held still the whole time (or the elf couldn't reach the box).
+--   Gotcha  = they moved while being sniffed.
+--   Visible = they popped out before the elf got there: keep chasing.
+--   Gone    = they left or the elf was removed.
+type InspectResult = "Fooled" | "Gotcha" | "Visible" | "Gone"
+
+local function inspect(elf: Elf, player: Player): InspectResult
+	local settings = Config.Disguise
+	local tick = Config.Guards.ChaseTickSeconds
+	local boxAt = DisguiseService:GetBoxPosition(player)
+	if not boxAt then
+		return "Visible"
+	end
+	local walkStart = os.clock()
+	while flatDistance(elf.root.Position, boxAt) > settings.InspectReachStuds do
+		if not elf.model.Parent or not liveTarget(player) then
+			return "Gone"
+		elseif not DisguiseService:IsDisguised(player) then
+			return "Visible"
+		elseif os.clock() - walkStart > settings.InspectWalkMaxSeconds then
+			return "Fooled" -- blocked on the way: it loses interest
+		end
+		elf.humanoid:MoveTo(boxAt)
+		task.wait(tick)
+	end
+	elf.humanoid:MoveTo(elf.root.Position)
+	local here = elf.root.Position
+	elf.root.CFrame = CFrame.lookAt(here, Vector3.new(boxAt.X, here.Y, boxAt.Z))
+	if not DisguiseService:IsDisguised(player) then
+		return "Visible"
+	end
+	DisguiseService:BeginInspect(player)
+	local result: InspectResult = "Fooled"
+	local endsAt = os.clock() + settings.InspectSeconds
+	local step = 0
+	while os.clock() < endsAt do
+		if not elf.model.Parent or not liveTarget(player) then
+			result = "Gone"
+			break
+		elseif not DisguiseService:IsDisguised(player) then
+			result = "Gotcha"
+			break
+		end
+		say(elf, if (step // 5) % 2 == 0 then "*sniff*" else "*sniff sniff*")
+		step += 1
+		task.wait(0.1)
+	end
+	DisguiseService:EndInspect(player, result == "Fooled")
+	return result
+end
+
 local function runChase(elf: Elf)
 	local guards = Config.Guards
 	local settings = guards.ByZone[elf.zone]
@@ -496,11 +561,28 @@ local function runChase(elf: Elf)
 	local pathPoints: { Vector3 }? = nil
 	local pathTried = false
 	local pathIndex = 2
+	local lastWords: string? = nil -- said after the chase ends ("...Huh. Just a present.", "GOTCHA!")
 	while elf.model.Parent and player and player.Parent do
 		local target = liveTarget(player)
 		local now = os.clock()
 		if not target or now - startedAt > guards.ChaseMaxSeconds then
 			break
+		end
+		if DisguiseService:IsDisguised(player) then
+			local result = inspect(elf, player)
+			if result == "Gotcha" then
+				lastWords = "GOTCHA!"
+				onCaught(elf, player)
+				break
+			elseif result == "Fooled" then
+				lastWords = "...Huh. Just a present."
+				elf.ignoreUntil[player] = os.clock() + Config.Disguise.FooledIgnoreSeconds
+				break
+			elseif result == "Gone" then
+				break
+			end
+			lastSeenAt = os.clock() -- "Visible": they popped out in front of it; chase on
+			continue
 		end
 		local targetPosition = target.root.Position
 		if
@@ -552,6 +634,16 @@ local function runChase(elf: Elf)
 	elf.humanoid.WalkSpeed = guards.PatrolWalkSpeed
 	setAlert(elf, false)
 	elf.nextIndex = nearestWaypointIndex(elf)
+	local words = lastWords
+	if words then
+		say(elf, words)
+		task.delay(Config.Disguise.HuhShowSeconds, function()
+			local text = elf.alertText
+			if elf.alert and elf.state == "Patrol" and text and text.Text == words then
+				elf.alert.Enabled = false
+			end
+		end)
+	end
 end
 
 local function run(elf: Elf)
