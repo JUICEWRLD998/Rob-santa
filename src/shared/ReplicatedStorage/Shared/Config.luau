@@ -71,6 +71,14 @@ local Config = {
 		ToysShownOnTable = 4, -- (my pick) unplaced toys displayed on the unwrap table (step 2.3 moves them)
 	},
 
+	-- Section 13: the unwrap reveal popup (placeholder until Phase 5). All (my pick).
+	Reveal = {
+		PopSeconds = 0.35,
+		HoldSeconds = 2.2,
+		HideSeconds = 0.2,
+		ScalePerTier = 0.08, -- "bigger for higher rarity": Common 1.0, Mythic 1.4
+	},
+
 	-- Section 4: guards.
 	Guards = {
 		PatrolWalkSpeed = 8,
