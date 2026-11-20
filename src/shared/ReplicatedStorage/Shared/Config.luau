@@ -126,6 +126,12 @@ local Config = {
 		},
 	},
 
+	-- Testing switches. They only work inside Roblox Studio (RunService:IsStudio()); a published
+	-- game ignores them completely.
+	Debug = {
+		OpenZonesInStudio = true, -- Zone 2/3 barriers walk-through in Studio playtests (until 4.2 unlocks)
+	},
+
 	-- Section 5: the gift-box disguise.
 	Disguise = {
 		WrapsPerTrip = 2, -- refilled when you touch your hideout

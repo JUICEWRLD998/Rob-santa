@@ -49,7 +49,8 @@ src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.l
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
-                        ShopService, EventService, MonetizationService, AdventService, TutorialService
+                        ShopService, EventService, MonetizationService, AdventService, TutorialService,
+                        ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only)
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
              Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (Phase 4)
 src/client/  Main.local.luau (requires each module in Controllers/)
