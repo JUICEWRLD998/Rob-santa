@@ -56,7 +56,8 @@ src/client/  Main.local.luau (requires each module in Controllers/)
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController
-ServerStorage/Templates (place file): Present, Toy (built in 2.1/2.2), later elf and snowman models
+ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, temporary R15 rig, no scripts), later snowman
+Workspace/Guards: live elves, created by GuardService at boot (collision group "Elves")
 StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
 Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
