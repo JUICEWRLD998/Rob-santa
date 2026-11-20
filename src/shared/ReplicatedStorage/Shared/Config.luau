@@ -101,6 +101,8 @@ local Config = {
 		CatchDistance = 3.5, -- (my pick) studs between elf and player that count as "touching"
 		HeyShowSeconds = 1.2, -- (my pick) "HEY!" over its head, then just "!" for the rest of the chase
 		CaughtIgnoreSeconds = 5, -- TEMPORARY until jail (3.3): after a catch the elf ignores you this long
+		GiveUpCooldownSeconds = 3, -- (my pick) after a chase ends the elf ignores that player this long,
+		-- or the 8 s chase limit means nothing: it would re-spot you the same instant (found in 3.2 testing)
 		ConeSlices = 8, -- (my pick) triangles per floor cone; more = smoother edge
 		ConeTransparency = 0.6, -- (my pick) 0.72 faded into the pale Zone 1 floor at player height
 		ByZone = {

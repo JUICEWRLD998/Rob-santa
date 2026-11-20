@@ -510,7 +510,12 @@ local function runChase(elf: Elf)
 		end
 		task.wait(guards.ChaseTickSeconds)
 	end
-	-- Back to patrol from the nearest point on its route.
+	-- Back to patrol from the nearest point on its route. It leaves this player alone a moment,
+	-- otherwise it would re-spot them the same instant and the chase limit would mean nothing.
+	if player then
+		local cooldownEnd = os.clock() + guards.GiveUpCooldownSeconds
+		elf.ignoreUntil[player] = math.max(elf.ignoreUntil[player] or 0, cooldownEnd)
+	end
 	elf.state = "Patrol"
 	elf.target = nil
 	elf.humanoid.WalkSpeed = guards.PatrolWalkSpeed
