@@ -148,6 +148,13 @@ local function checkDelivery(player: Player)
 	if not queue or not isOnMat(root, mat) then
 		return
 	end
+	-- Step 2.4: a present that reached the mat faster than any legal player could run was
+	-- teleported. Send it back to its zone. Measured to the mat (server truth), not the character.
+	if PresentService:CarriedTooFast(player, mat.Position) then
+		warn(`[UnwrapService] refused delivery from {player.Name} ({player.UserId}): too fast from the zone`)
+		PresentService:ReturnCarried(player)
+		return
+	end
 	for _, present in PresentService:TakeCarried(player) do
 		table.insert(queue.pending, present)
 	end
