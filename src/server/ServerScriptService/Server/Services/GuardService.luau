@@ -5,7 +5,7 @@
 --   VisionChecksPerSecond times a second. Seeing a player: "HEY!" + whistle, "!" over its head,
 --   then a chase at the zone's chase speed for up to ChaseMaxSeconds, giving up after
 --   GiveUpAfterLostSightSeconds without sight. Touching the player while chasing = caught.
---   For now a catch only prints "CAUGHT"; Naughty Jail is step 3.3.
+--   A catch sends the player to Naughty Jail (JailService, step 3.3).
 --
 -- The server owns elf physics (SetNetworkOwner(nil)) so every player sees the same elf in the same
 -- place. Elves sit in their own collision group so two elves never block each other.
@@ -19,6 +19,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local JailService = require(script.Parent.JailService)
 
 local ELF_GROUP = "Elves"
 local FOLDER_NAME = "Guards" -- Workspace/Guards, created at boot, holds the live elves
@@ -479,9 +480,8 @@ local function setAlert(elf: Elf, on: boolean)
 end
 
 local function onCaught(elf: Elf, player: Player)
-	-- TEMPORARY until Naughty Jail (step 3.3): just report it and leave the player alone a moment.
-	print(`[GuardService] CAUGHT {player.Name} (elf in zone {elf.zone})`)
 	elf.ignoreUntil[player] = os.clock() + Config.Guards.CaughtIgnoreSeconds
+	JailService:Jail(player)
 end
 
 local function runChase(elf: Elf)
