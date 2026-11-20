@@ -96,6 +96,13 @@ local Config = {
 		ChaseMaxSeconds = 8,
 		GiveUpAfterLostSightSeconds = 3,
 		VisionChecksPerSecond = 5,
+		-- visionAngle below is the cone's FULL width (70 = 35 degrees each side of where it faces).
+		ChaseTickSeconds = 0.2, -- (my pick) how often a chasing elf re-aims at you
+		CatchDistance = 3.5, -- (my pick) studs between elf and player that count as "touching"
+		HeyShowSeconds = 1.2, -- (my pick) "HEY!" over its head, then just "!" for the rest of the chase
+		CaughtIgnoreSeconds = 5, -- TEMPORARY until jail (3.3): after a catch the elf ignores you this long
+		ConeSlices = 8, -- (my pick) triangles per floor cone; more = smoother edge
+		ConeTransparency = 0.6, -- (my pick) 0.72 faded into the pale Zone 1 floor at player height
 		ByZone = {
 			[1] = { visionRange = 28, visionAngle = 70, chaseSpeed = 13, elvesMin = 1, elvesMax = 2, snowmanCameras = 0, headElves = 0 },
 			[2] = { visionRange = 32, visionAngle = 80, chaseSpeed = 14, elvesMin = 3, elvesMax = 3, snowmanCameras = 1, headElves = 0 },
