@@ -29,6 +29,7 @@ Script Sync nests the service name inside the linked folder (server, shared), bu
 
 File names: `X.luau` = ModuleScript, `X.server.luau` = Script, `X.local.luau` = LocalScript, folder = Folder.
 Script Sync caveats: never put attributes or tags on scripts; don't put non-script instances in synced folders.
+**One synced folder can silently stop syncing while the others still work** (2026-11-20, step 2.1): after Studio reconnected, edits to `Shared/Config.luau` and a brand-new file in `Shared/` never reached Studio, while `Services/` and `Controllers/` synced fine. The playtest would have run stale numbers. Before a playtest that depends on an edit, compare `#script.Source` in Studio (`execute_luau`) with the file's byte count (`wc -c`). Reopening the place (auto-resume sync on) fixed it; re-linking the folder should too.
 
 - Parts, models, UI and sounds live in the **place file**, not on disk. After world/UI edits, `save_place`.
 
