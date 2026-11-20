@@ -60,6 +60,7 @@ local GuardService = {}
 
 local folder: Folder
 local routesByZone: { [number]: { [number]: Route } } = {}
+local zoneAreas: { [number]: BasePart } = {} -- ZoneArea-tagged box per zone: elves never chase past it
 local elves: { Elf } = {}
 local random = Random.new()
 local rayParams = RaycastParams.new()
@@ -97,6 +98,30 @@ local function collectRoutes()
 			end)
 		end
 	end
+end
+
+local function collectZoneAreas()
+	for _, instance in CollectionService:GetTagged("ZoneArea") do
+		local zone = instance:GetAttribute("Zone")
+		if zone == nil and instance.Parent then
+			zone = instance.Parent:GetAttribute("Zone")
+		end
+		if instance:IsA("BasePart") and type(zone) == "number" then
+			zoneAreas[zone] = instance
+		end
+	end
+end
+
+-- Elves guard their own room only: a player outside it can't be spotted, and a chase that would
+-- cross the edge counts as losing sight (the elf stops where it last saw you, inside the zone).
+local function insideZone(zone: number, position: Vector3): boolean
+	local area = zoneAreas[zone]
+	if not area then
+		return true -- no ZoneArea box for this zone: don't limit (warned once at boot)
+	end
+	local localPosition = area.CFrame:PointToObjectSpace(position)
+	local half = area.Size / 2
+	return math.abs(localPosition.X) <= half.X and math.abs(localPosition.Y) <= half.Y and math.abs(localPosition.Z) <= half.Z
 end
 
 local function setupCollisionGroup()
@@ -325,7 +350,11 @@ local function findVisiblePlayer(elf: Elf): Player?
 		local target = liveTarget(player)
 		if target and not (ignoredUntil and now < ignoredUntil) then
 			local position = target.root.Position
-			if inCone(elf, position, settings.visionRange, settings.visionAngle) and hasLineOfSight(elf, target.character) then
+			if
+				insideZone(elf.zone, position)
+				and inCone(elf, position, settings.visionRange, settings.visionAngle)
+				and hasLineOfSight(elf, target.character)
+			then
 				local distance = flatDistance(elf.root.Position, position)
 				if distance < bestDistance then
 					best, bestDistance = player, distance
@@ -482,7 +511,9 @@ local function runChase(elf: Elf)
 			break
 		end
 		-- While chasing, the elf has turned toward you: sight = in range + clear line, any angle.
-		local seen = flatDistance(elf.root.Position, targetPosition) <= settings.visionRange
+		-- Leaving its zone counts as lost sight, so it never follows you out.
+		local seen = insideZone(elf.zone, targetPosition)
+			and flatDistance(elf.root.Position, targetPosition) <= settings.visionRange
 			and hasLineOfSight(elf, target.character)
 		if seen then
 			lastSeenAt = now
@@ -553,6 +584,12 @@ end
 function GuardService:Init()
 	setupCollisionGroup()
 	collectRoutes()
+	collectZoneAreas()
+	for zone = 1, Config.LaunchZones do
+		if not zoneAreas[zone] then
+			warn(`[GuardService] no ZoneArea part for zone {zone}: its elves can chase anywhere`)
+		end
+	end
 	local existing = Workspace:FindFirstChild(FOLDER_NAME)
 	if existing then
 		existing:Destroy()

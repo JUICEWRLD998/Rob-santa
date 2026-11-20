@@ -66,7 +66,7 @@ The guards are what make this a heist instead of a shopping trip.
 - **Patrol:** walks between waypoints in its zone at walk speed 8, pausing about a second at each one (like it's looking around). Several elves in one zone share its route, spread out along it.
 - **Sight:** a vision cone (angle and range per zone, table below) plus a line-of-sight check (walls block sight). The cone is drawn on the floor as a soft translucent shape, so players can read it. This matters for kids and for phones.
 - **Seeing you:** if you're in the cone, in line of sight and *not* a still gift box, a "!" pops over its head and it says "HEY!". Then it **chases**.
-- **Chase:** runs at you (speed per zone) for up to 8 seconds. Gives up if it loses sight of you for 3 seconds, then walks back to patrol. After giving up it ignores you for 3 seconds, so you get a real window to get away (otherwise it re-spots you instantly).
+- **Chase:** runs at you (speed per zone) for up to 8 seconds. Gives up if it loses sight of you for 3 seconds, then walks back to patrol. After giving up it ignores you for 3 seconds, so you get a real window to get away (otherwise it re-spots you instantly). **Elves guard their own room only:** they never chase past the zone edge, and stepping out of the zone counts as breaking sight.
 - **Catch:** touching you while chasing = caught. You go to Naughty Jail, and the present you carried returns to its zone.
 
 | Zone | Elf vision range | Vision angle | Chase speed | Elves |
