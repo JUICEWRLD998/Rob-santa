@@ -8,6 +8,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
@@ -38,6 +39,17 @@ local function wraps(): number
 	return if type(value) == "number" then value else 0
 end
 
+-- What to tell this player to press: the last thing they used (touch, gamepad, or keyboard).
+local function howToWrap(): string
+	local last = UserInputService:GetLastInputType()
+	if last == Enum.UserInputType.Touch or (UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled) then
+		return "Tap Wrap!"
+	elseif string.find(last.Name, "Gamepad") then
+		return "Press Y"
+	end
+	return "Press Q"
+end
+
 local function refreshHud()
 	local now = Workspace:GetServerTimeNow()
 	local status: string
@@ -48,7 +60,7 @@ local function refreshHud()
 	elseif wraps() <= 0 then
 		status = "Refill at home"
 	else
-		status = "Press Q"
+		status = howToWrap()
 	end
 	if wrapsCount then
 		wrapsCount.Text = `Wraps {wraps()}`
