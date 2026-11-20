@@ -58,7 +58,8 @@ src/client/  Main.local.luau (requires each module in Controllers/)
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, temporary R15 rig, no scripts), later snowman
-Workspace/Guards: live elves, created by GuardService at boot (collision group "Elves")
+Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by GuardService at boot
+(elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
 StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
 Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond,
 Jailed (3.3), Coal (3.3; not saved until Phase 4). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden
