@@ -149,10 +149,12 @@ end
 function JailController:Init() end
 
 function JailController:Start()
-	local gui = player:WaitForChild("PlayerGui"):WaitForChild("JailGui", GUI_WAIT_SECONDS)
+	local playerGui = player:WaitForChild("PlayerGui")
+	local gui = playerGui:WaitForChild("JailGui", GUI_WAIT_SECONDS)
 	if not gui then
-		warn("[JailController] PlayerGui/JailGui is missing (StarterGui/JailGui in the place file)")
-		return
+		-- Slow devices can take longer: say so, then keep waiting rather than give up for good.
+		warn("[JailController] still waiting for PlayerGui/JailGui (StarterGui/JailGui in the place file)")
+		gui = playerGui:WaitForChild("JailGui")
 	end
 	stamp = gui:WaitForChild("Stamp") :: Frame
 	stampScale = stamp:WaitForChild("Scale") :: UIScale
@@ -183,3 +185,4 @@ function JailController:Start()
 end
 
 return JailController
+

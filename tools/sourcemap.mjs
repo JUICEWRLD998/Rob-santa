@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 // [disk folder, DataModel path above it, folder name in Studio]
 const MOUNTS = [
 	["src/server/ServerScriptService/Server", ["ServerScriptService:ServerScriptService"], "Server"],
-	["src/client/Client", ["StarterPlayer:StarterPlayer", "StarterPlayerScripts:StarterPlayerScripts"], "Client"],
+	["src/client/Client/Client", ["StarterPlayer:StarterPlayer", "StarterPlayerScripts:StarterPlayerScripts"], "Client"],
 	["src/shared/ReplicatedStorage/Shared", ["ReplicatedStorage:ReplicatedStorage"], "Shared"],
 ];
 

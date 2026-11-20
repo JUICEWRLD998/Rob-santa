@@ -17,15 +17,13 @@ A Roblox game (Luau), built by vibecoding. The owner is **new to Roblox developm
 - **Roblox Studio MCP** (built into Studio). Use it to build/edit the world (`execute_luau` with datamodel_type Edit), inspect the tree, generate avatars/meshes/materials/animations, search/insert assets, playtest (`start_stop_play`, `get_console_output`, `screen_capture`, character/keyboard input), and `save_place` after world edits. If the MCP is not connected, stop and tell him to check Studio → Assistant → … → Manage MCP Servers (see docs/02-SETUP.md step 5).
 - **Script Sync** mirrors scripts between Studio and `src/`. Write scripts as files in `src/`, never by creating Script instances through `execute_luau` (they wouldn't exist on disk or in git).
 
-| Disk | Studio |
-|---|---|
-| Disk (verified 2026-11-19, both directions) | Studio |
+| Disk (verified 2026-11-20, both directions) | Studio |
 |---|---|
 | `src/server/ServerScriptService/Server/` | `ServerScriptService/Server` |
-| `src/client/Client/` | `StarterPlayer/StarterPlayerScripts/Client` |
+| `src/client/Client/Client/` | `StarterPlayer/StarterPlayerScripts/Client` |
 | `src/shared/ReplicatedStorage/Shared/` | `ReplicatedStorage/Shared` |
 
-Script Sync nests the service name inside the linked folder (server, shared), but not for the client. A file placed at the top of `src/server/`, `src/client/` or `src/shared/` is NOT picked up. Always write to the full paths in the table. Studio's `Instance.new("Script")` syncs to disk as `X.legacy.luau`; a `X.server.luau` file arrives in Studio as a Script with RunContext Server.
+Script Sync nests the LINKED INSTANCE's name inside the folder you pick. Server and shared are linked on the service, so the service name nests. Since the 2026-11-20 re-link (step 3.4), the client link sits on `StarterPlayerScripts/Client` → `src\client\Client`, so `Client` nests again: `src/client/Client/Client/`. After any re-link, find where Studio actually writes (`find src -newer <a recent file>`) before editing, and fix this table and `tools/sourcemap.mjs` to match. A file placed at the top of `src/server/`, `src/client/` or `src/shared/` is NOT picked up. Always write to the full paths in the table. Studio's `Instance.new("Script")` syncs to disk as `X.legacy.luau`; a `X.server.luau` file arrives in Studio as a Script with RunContext Server.
 
 File names: `X.luau` = ModuleScript, `X.server.luau` = Script, `X.local.luau` = LocalScript, folder = Folder.
 Script Sync caveats: never put attributes or tags on scripts; don't put non-script instances in synced folders.
