@@ -71,6 +71,15 @@ local Config = {
 		ToysShownOnTable = 4, -- (my pick) unplaced toys displayed on the unwrap table (step 2.3 moves them)
 	},
 
+	-- Step 2.4 security: a delivery is refused if the present would have had to travel faster than
+	-- this from where it was grabbed (straight line, horizontal). Fastest legal player: 16 walk
+	-- + 9 (Boots 6) + 4 (Speed Boots pass) = 29. Slack covers lag. Raise MaxTravelSpeed if a new
+	-- speed source is added (e.g. a sleigh), or real players will lose deliveries.
+	AntiCheat = {
+		MaxTravelSpeed = 29,
+		TravelSpeedSlack = 1.3,
+	},
+
 	-- Section 13: the unwrap reveal popup (placeholder until Phase 5). All (my pick).
 	Reveal = {
 		PopSeconds = 0.35,

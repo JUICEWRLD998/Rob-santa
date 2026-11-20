@@ -42,6 +42,10 @@ type Present = {
 	weld: WeldConstraint?,
 	prompt: ProximityPrompt?,
 	returnTimer: thread?,
+	-- Where and when it was picked up. The position is the present's own resting spot (server
+	-- truth, not the client's character), used by the delivery speed check.
+	grabbedFrom: Vector3?,
+	grabbedAt: number?,
 }
 
 -- What UnwrapService gets when a player delivers.
@@ -154,9 +158,12 @@ local function tryGrab(player: Player, present: Present)
 	if not list or #list >= capacityOf(player) then
 		return
 	end
+	local grabbedFrom = present.box.Position -- read before attaching moves the box
 	if not attachToBack(present, character, #list + 1) then
 		return
 	end
+	present.grabbedFrom = grabbedFrom
+	present.grabbedAt = os.clock()
 
 	removePrompt(present)
 	local point = present.point
@@ -255,6 +262,8 @@ local function spawnAt(point: SpawnPoint)
 		weld = nil,
 		prompt = nil,
 		returnTimer = nil,
+		grabbedFrom = nil,
+		grabbedAt = nil,
 	}
 	model.Parent = folder
 	placeAt(present, point)
@@ -429,6 +438,29 @@ function PresentService:Start()
 			spawnAt(point)
 		end
 	end
+end
+
+-- True if any carried present would have had to move faster than any legal player to reach
+-- `position` by now (straight line, horizontal only, so it never punishes a winding route).
+-- Catches a teleport from the zone to the drop mat. Step 2.4 security review.
+function PresentService:CarriedTooFast(player: Player, position: Vector3): boolean
+	local list = carriedBy[player]
+	if not list then
+		return false
+	end
+	local limit = Config.AntiCheat.MaxTravelSpeed * Config.AntiCheat.TravelSpeedSlack
+	local now = os.clock()
+	for _, present in list do
+		local from, at = present.grabbedFrom, present.grabbedAt
+		if from and at then
+			local flat = Vector3.new(position.X - from.X, 0, position.Z - from.Z).Magnitude
+			local elapsed = math.max(now - at, 0.001)
+			if flat / elapsed > limit then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 -- How many presents the player is carrying right now.
