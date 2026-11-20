@@ -29,6 +29,7 @@ Script Sync nests the service name inside the linked folder (server, shared), bu
 
 File names: `X.luau` = ModuleScript, `X.server.luau` = Script, `X.local.luau` = LocalScript, folder = Folder.
 Script Sync caveats: never put attributes or tags on scripts; don't put non-script instances in synced folders.
+**One synced folder can silently stop syncing while the others still work** (2026-11-20, step 2.1): after Studio reconnected, edits to `Shared/Config.luau` and a brand-new file in `Shared/` never reached Studio, while `Services/` and `Controllers/` synced fine. The playtest would have run stale numbers. Before a playtest that depends on an edit, compare `#script.Source` in Studio (`execute_luau`) with the file's byte count (`wc -c`). Reopening the place (auto-resume sync on) fixed it; re-linking the folder should too.
 
 - Parts, models, UI and sounds live in the **place file**, not on disk. After world/UI edits, `save_place`.
 
@@ -37,20 +38,23 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
   - `roblox-dev-skill` (MSayib, v2.22.0, MIT): verified Luau/Roblox API facts, security, ProfileStore, ProcessReceipt, Studio MCP limits. Its version line is a date, not today's engine version.
   - `roblox-simulator-economy` (gamedev-skills, Apache-2.0): cost curves, income/sec, offline earnings; run its calculator with `tools/bin/lune.exe run .claude/skills/roblox-simulator-economy/scripts/balance.luau <file.json>`.
 - **Roblox's own skills** come through the Studio MCP `skill` tool (`list_skills` lists them). Use `rbx-permissions` before DataStore or Open Cloud work, `rbx-device-simulator-lua` for phone checks, `rbx-unit-test` for module tests, `rbx-instrument-analytics` for the tutorial funnel. `rbx-open-cloud-usage` can create passes/products, which still needs his explicit go.
-- **Before every playtest** that follows a script change: `bash tools/check.sh` (selene lint + luau-lsp type check over `src/`, using a sourcemap built from the Script Sync table). Fix what it reports first. Verified 2026-11-19 with planted errors: luau-lsp catches type errors and deprecated `wait()`; selene catches unused and undefined variables but does NOT flag `wait()`, so both are needed. `require()` resolution through the generated sourcemap is proven (step 1.2: a planted wrong type through `require(ReplicatedStorage.Shared.Config)` and a missing module were both flagged). Gotcha it found: `xpcall` on a function returning nothing types as one return value; wrap it so the inner function returns `any`. Tools live in `tools/bin/` (gitignored): selene 0.32.0, luau-lsp 1.70.1, lune 0.11.1, from each project's GitHub releases.
+- **Before every playtest** that follows a script change: `bash tools/check.sh` (selene lint + luau-lsp type check over `src/`, using a sourcemap built from the Script Sync table). Fix what it reports first. Verified 2026-11-19 with planted errors: luau-lsp catches type errors and deprecated `wait()`; selene catches unused and undefined variables but does NOT flag `wait()`, so both are needed. `require()` resolution through the generated sourcemap is proven (step 1.2: a planted wrong type through `require(ReplicatedStorage.Shared.Config)` and a missing module were both flagged). Gotcha it found: `xpcall` on a function returning nothing types as one return value; wrap it so the inner function returns `any` (same for `pcall`). **Gate a commit on the output, not on a pipe:** `bash tools/check.sh | tail && git commit` commits even when the check fails, because the pipe returns `tail`'s exit code (this happened once in step 2.1). Use `bash tools/check.sh > out.txt 2>&1; grep -q "== CLEAN" out.txt && git commit ...`. Tools live in `tools/bin/` (gitignored): selene 0.32.0, luau-lsp 1.70.1, lune 0.11.1, from each project's GitHub releases.
 
 ## Architecture
 ```
 src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.luau (remote names), Types.luau
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
-             Services/  PlotService, PresentService, ShelfService, EconomyService, GuardService,
-                        DisguiseService, JailService, DataService, ShopService, EventService,
-                        MonetizationService, AdventService, TutorialService
+             Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
+                        EconomyService, GuardService, DisguiseService, JailService, DataService,
+                        ShopService, EventService, MonetizationService, AdventService, TutorialService
+                        (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
              Lib/ProfileStore.luau
 src/client/  Main.local.luau (requires each module in Controllers/)
-             Controllers/  HudController, RevealController, DisguiseController, ShopController,
-                           JailController, IndexController, AdventController, TutorialController
-ServerStorage/Templates (place file): present, toy, elf, snowman models
+             Controllers/  HudController, PresentController, RevealController, DisguiseController,
+                           ShopController, JailController, IndexController, AdventController,
+                           TutorialController
+ServerStorage/Templates (place file): Present, Toy (built in 2.1/2.2), later elf and snowman models
+StarterGui (place file): RevealGui (2.2); controllers fill and animate it, they don't build it
 Workspace/Map (place file): world, with CollectionService tags + attributes for gameplay spots
 ```
 - **Server-authoritative, always.** The client only sends intents through RemoteEvents. The server validates every remote: player state, distance, ownership, cooldowns, rate limits, and argument types. Coins, rolls, steals, sells, unlocks, jail and purchases happen only on the server.

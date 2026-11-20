@@ -18,6 +18,20 @@ export type RarityDef = {
 	color: Color3,
 }
 
+-- One owned toy. `uid` tells apart two copies of the same toy.
+export type OwnedToy = {
+	uid: string,
+	toyId: string,
+	mutation: Mutation?,
+}
+
+-- Sent server -> client on UnwrapReveal.
+export type UnwrapResult = {
+	toyId: string,
+	rarity: Rarity,
+	mutation: Mutation?,
+}
+
 -- The contract every server Service and client Controller module follows.
 -- Init runs for all modules first (set up state, no yielding); Start runs after (may yield).
 export type Module = {
