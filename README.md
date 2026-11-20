@@ -45,8 +45,8 @@ Plan for your first Roblox game, from idea to launch. You build it by vibecoding
 
 Tick these as you go. Claude reads this list to know where you are.
 
-- [ ] Phase 0: Setup (Studio installed, Claude connected, code syncing, git)
-- [ ] Phase 1: Greybox world (map blocked out, hideouts, zones)
+- [x] Phase 0: Setup (Studio installed, Claude connected, code syncing, git)
+- [x] Phase 1: Greybox world (map blocked out, hideouts, zones)
 - [ ] Phase 2: Core loop (grab, carry, run home, unwrap, display, sell)
 - [ ] Phase 3: Elves, jail and the gift-box disguise
 - [ ] Phase 4: Saving, upgrades, zones 2 and 3, rarities, index
