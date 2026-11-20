@@ -110,8 +110,20 @@ local Config = {
 			[2] = { visionRange = 32, visionAngle = 80, chaseSpeed = 14, elvesMin = 3, elvesMax = 3, snowmanCameras = 1, headElves = 0 },
 			[3] = { visionRange = 36, visionAngle = 90, chaseSpeed = 15, elvesMin = 3, elvesMax = 3, snowmanCameras = 2, headElves = 1 },
 		},
-		HeadElf = { chaseSpeed = 17, inspectSeconds = 5 },
-		SnowmanCamera = { sweepDegrees = 90, sweepSeconds = 4, visionRange = 40, visionAngle = 50, alarmChaseSeconds = 5 },
+		HeadElf = {
+			chaseSpeed = 17,
+			inspectSeconds = 5,
+			scale = 1.3, -- (my pick) "taller": the whole elf at 1.3x
+		},
+		SnowmanCamera = {
+			sweepDegrees = 90, -- full turn, left edge to right edge
+			sweepSeconds = 4, -- one sweep from one edge to the other
+			visionRange = 40,
+			visionAngle = 50,
+			alarmChaseSeconds = 5, -- every elf in the zone chases this long after the bell
+			alarmCooldownSeconds = 8, -- (my pick) one snowman rings for the same player at most this often
+			bellShowSeconds = 2, -- (my pick) "DING DING!" over the snowman and its cone stays red this long
+		},
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -124,6 +136,7 @@ local Config = {
 		MoveCheckSeconds = 0.1, -- (my pick) how often the server checks that you're still
 		BoxScale = 2.2, -- (my pick) disguise box size vs a zone present (2 studs): 4.4 studs hides an avatar
 		InspectReachStuds = 4, -- (my pick) a chasing elf stops this close to the box to sniff it
+		InspectCreepStuds = 6, -- (my pick) for the last this-many studs it slows to walk speed (no shoving)
 		InspectWalkMaxSeconds = 6, -- (my pick) gives up walking to the box after this long (blocked)
 		FooledIgnoreSeconds = 5, -- (my pick) a fooled elf leaves you alone this long, so popping out
 		-- right after "Just a present" doesn't restart the chase on the spot

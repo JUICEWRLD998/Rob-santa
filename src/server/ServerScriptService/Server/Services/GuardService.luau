@@ -6,6 +6,9 @@
 --   then a chase at the zone's chase speed for up to ChaseMaxSeconds, giving up after
 --   GiveUpAfterLostSightSeconds without sight. Touching the player while chasing = caught.
 --   A catch sends the player to Naughty Jail (JailService, step 3.3).
+--   Disguise (step 3.4): patrollers ignore a still gift box; a chasing elf walks up and sniffs it.
+--   Step 3.5: Snowman Cameras (zone 2+) sweep and ring a bell: every patrolling elf in the zone
+--   runs to where it saw you for alarmChaseSeconds. Head Elf (zone 3): 1.3x, faster, sniffs 5 s.
 --
 -- The server owns elf physics (SetNetworkOwner(nil)) so every player sees the same elf in the same
 -- place. Elves sit in their own collision group so two elves never block each other.
@@ -28,6 +31,7 @@ local REACH_DISTANCE = 2.5 -- studs (flat) that count as "arrived at the waypoin
 local CHECK_SECONDS = 0.25
 local PROGRESS_STUDS = 0.5 -- moving less than this between checks counts as no progress
 local CATCH_HEIGHT = 4 -- a player standing on cover this far above the elf can't be grabbed
+local INSPECT_STEP_SECONDS = 0.05 -- distance checks while creeping up on a gift box
 -- Roblox's default R15 walk and idle (read from a fresh rig's Animate script, 2026-11-20).
 -- Placeholder until the elf's own animations in Phase 5.
 local WALK_ANIMATION = "rbxassetid://913402848"
@@ -56,6 +60,22 @@ type Elf = {
 	alert: BillboardGui?,
 	alertText: TextLabel?,
 	alertSound: Sound?,
+	isHead: boolean, -- Head Elf (zone 3): bigger, faster, sniffs longer
+	chaseSpeed: number,
+	inspectSeconds: number,
+	alarmPosition: Vector3?, -- set by a Snowman Camera bell: chase starts toward here
+}
+
+-- Snowman Camera (step 3.5): stands still, turns left and right, rings a bell when it sees you.
+type Snowman = {
+	model: Model,
+	head: BasePart, -- sight starts here
+	base: CFrame, -- facing the middle of the sweep
+	zone: number,
+	cone: { BasePart },
+	bell: BillboardGui,
+	ringUntil: number, -- os.clock: cone red and "DING DING!" shown until then
+	cooldown: { [Player]: number },
 }
 
 local GuardService = {}
@@ -64,6 +84,7 @@ local folder: Folder
 local routesByZone: { [number]: { [number]: Route } } = {}
 local zoneAreas: { [number]: BasePart } = {} -- ZoneArea-tagged box per zone: elves never chase past it
 local elves: { Elf } = {}
+local snowmen: { Snowman } = {}
 local random = Random.new()
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -237,9 +258,33 @@ local function setConeColor(elf: Elf, color: Color3)
 	end
 end
 
-local function spawnElf(template: Model, zone: number, route: Route, startIndex: number): Elf?
+-- The Head Elf's mark until Phase 5 art: a gold hat (it is also 1.3x taller).
+local function addHeadElfHat(head: BasePart)
+	local hat = Instance.new("Part")
+	hat.Name = "HeadElfHat"
+	hat.Shape = Enum.PartType.Cylinder
+	hat.Size = Vector3.new(0.5, head.Size.X * 1.1, head.Size.X * 1.1)
+	hat.Color = Color3.fromRGB(255, 196, 40)
+	hat.Material = Enum.Material.Neon
+	hat.CanCollide = false
+	hat.CanTouch = false
+	hat.CanQuery = false
+	hat.Massless = true
+	hat.CFrame = head.CFrame * CFrame.new(0, head.Size.Y / 2 + 0.25, 0) * CFrame.Angles(0, 0, math.rad(90))
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = head
+	weld.Part1 = hat
+	weld.Parent = hat
+	hat.Parent = head
+end
+
+local function spawnElf(template: Model, zone: number, route: Route, startIndex: number, isHead: boolean): Elf?
 	local settings = Config.Guards.ByZone[zone]
+	local headSettings = Config.Guards.HeadElf
 	local model = template:Clone()
+	if isHead then
+		model:ScaleTo(headSettings.scale)
+	end
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart")
 	local head = model:FindFirstChild("Head")
@@ -266,8 +311,11 @@ local function spawnElf(template: Model, zone: number, route: Route, startIndex:
 	local standAt = here + Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2 + 0.5, 0)
 	model:PivotTo(CFrame.lookAt(standAt, Vector3.new(ahead.X, standAt.Y, ahead.Z)))
 	local cone = buildCone(model, root, humanoid, settings.visionRange, settings.visionAngle)
+	if isHead then
+		addHeadElfHat(head)
+	end
 	model:SetAttribute("Zone", zone)
-	model.Name = `Elf_Zone{zone}`
+	model.Name = if isHead then `HeadElf_Zone{zone}` else `Elf_Zone{zone}`
 	model.Parent = folder
 	root:SetNetworkOwner(nil)
 	animate(humanoid)
@@ -290,6 +338,10 @@ local function spawnElf(template: Model, zone: number, route: Route, startIndex:
 		alert = if alert and alert:IsA("BillboardGui") then alert else nil,
 		alertText = if alertText and alertText:IsA("TextLabel") then alertText else nil,
 		alertSound = if alertSound and alertSound:IsA("Sound") then alertSound else nil,
+		isHead = isHead,
+		chaseSpeed = if isHead then headSettings.chaseSpeed else settings.chaseSpeed,
+		inspectSeconds = if isHead then headSettings.inspectSeconds else Config.Disguise.InspectSeconds,
+		alarmPosition = nil,
 	}
 end
 
@@ -298,13 +350,12 @@ end
 
 -- Clear line from the elf's head to the player's head or body. Walls and cover block it; elves,
 -- the player's own character and presents (a carried box on your back) do not.
-local function hasLineOfSight(elf: Elf, character: Model): boolean
+local function lineOfSightFrom(origin: Vector3, character: Model): boolean
 	local filter: { Instance } = { folder, character }
 	for _, present in CollectionService:GetTagged("Present") do
 		table.insert(filter, present)
 	end
 	rayParams.FilterDescendantsInstances = filter
-	local origin = elf.head.Position
 	for _, name in { "Head", "HumanoidRootPart" } do
 		local part = character:FindFirstChild(name)
 		if part and part:IsA("BasePart") then
@@ -316,8 +367,13 @@ local function hasLineOfSight(elf: Elf, character: Model): boolean
 	return false
 end
 
-local function inCone(elf: Elf, position: Vector3, range: number, angle: number): boolean
-	local offset = Vector3.new(position.X - elf.root.Position.X, 0, position.Z - elf.root.Position.Z)
+local function hasLineOfSight(elf: Elf, character: Model): boolean
+	return lineOfSightFrom(elf.head.Position, character)
+end
+
+-- Is `position` inside the flat cone at `origin` facing `look` (range in studs, full angle in degrees)?
+local function coneContains(origin: Vector3, look: Vector3, position: Vector3, range: number, angle: number): boolean
+	local offset = Vector3.new(position.X - origin.X, 0, position.Z - origin.Z)
 	local distance = offset.Magnitude
 	if distance > range then
 		return false
@@ -325,9 +381,12 @@ local function inCone(elf: Elf, position: Vector3, range: number, angle: number)
 	if distance < 0.5 then
 		return true
 	end
-	local look = elf.root.CFrame.LookVector
 	local forward = Vector3.new(look.X, 0, look.Z).Unit
 	return forward:Dot(offset.Unit) >= math.cos(math.rad(angle / 2))
+end
+
+local function inCone(elf: Elf, position: Vector3, range: number, angle: number): boolean
+	return coneContains(elf.root.Position, elf.root.CFrame.LookVector, position, range, angle)
 end
 
 type Target = { character: Model, humanoid: Humanoid, root: BasePart }
@@ -511,17 +570,28 @@ local function inspect(elf: Elf, player: Player): InspectResult
 	if not boxAt then
 		return "Visible"
 	end
+	-- Creep up on the box: slow to a walk for the last few studs and check often, so a fast elf
+	-- never overshoots and shoves the hidden player (a shove counted as "you moved" = an unfair
+	-- GOTCHA, found in 3.5 testing with the Head Elf at speed 17). Bigger elves stop further back.
+	local reach = settings.InspectReachStuds * (if elf.isHead then Config.Guards.HeadElf.scale else 1)
 	local walkStart = os.clock()
-	while flatDistance(elf.root.Position, boxAt) > settings.InspectReachStuds do
-		if not elf.model.Parent or not liveTarget(player) then
+	while true do
+		local distance = flatDistance(elf.root.Position, boxAt)
+		if distance <= reach then
+			break
+		elseif not elf.model.Parent or not liveTarget(player) then
 			return "Gone"
 		elseif not DisguiseService:IsDisguised(player) then
+			elf.humanoid.WalkSpeed = elf.chaseSpeed
 			return "Visible"
 		elseif os.clock() - walkStart > settings.InspectWalkMaxSeconds then
 			return "Fooled" -- blocked on the way: it loses interest
 		end
+		if distance <= reach + settings.InspectCreepStuds then
+			elf.humanoid.WalkSpeed = Config.Guards.PatrolWalkSpeed
+		end
 		elf.humanoid:MoveTo(boxAt)
-		task.wait(tick)
+		task.wait(if distance <= reach + settings.InspectCreepStuds then INSPECT_STEP_SECONDS else tick)
 	end
 	elf.humanoid:MoveTo(elf.root.Position)
 	local here = elf.root.Position
@@ -531,7 +601,7 @@ local function inspect(elf: Elf, player: Player): InspectResult
 	end
 	DisguiseService:BeginInspect(player)
 	local result: InspectResult = "Fooled"
-	local endsAt = os.clock() + settings.InspectSeconds
+	local endsAt = os.clock() + elf.inspectSeconds
 	local step = 0
 	while os.clock() < endsAt do
 		if not elf.model.Parent or not liveTarget(player) then
@@ -553,11 +623,17 @@ local function runChase(elf: Elf)
 	local guards = Config.Guards
 	local settings = guards.ByZone[elf.zone]
 	local player = elf.target
-	elf.humanoid.WalkSpeed = settings.chaseSpeed
+	elf.humanoid.WalkSpeed = elf.chaseSpeed
 	setAlert(elf, true)
 	local startedAt = os.clock()
 	local lastSeenAt = startedAt
-	local lastSeenPosition: Vector3? = nil
+	-- A Snowman Camera bell: run to where the snowman saw you, and keep looking for the whole
+	-- alarm time instead of giving up 3 s after losing sight.
+	local alarmedAt = elf.alarmPosition
+	elf.alarmPosition = nil
+	local chaseLimit = if alarmedAt then guards.SnowmanCamera.alarmChaseSeconds else guards.ChaseMaxSeconds
+	local lostSightLimit = if alarmedAt then chaseLimit else guards.GiveUpAfterLostSightSeconds
+	local lastSeenPosition: Vector3? = alarmedAt
 	local pathPoints: { Vector3 }? = nil
 	local pathTried = false
 	local pathIndex = 2
@@ -565,7 +641,7 @@ local function runChase(elf: Elf)
 	while elf.model.Parent and player and player.Parent do
 		local target = liveTarget(player)
 		local now = os.clock()
-		if not target or now - startedAt > guards.ChaseMaxSeconds then
+		if not target or now - startedAt > chaseLimit then
 			break
 		end
 		if DisguiseService:IsDisguised(player) then
@@ -582,6 +658,7 @@ local function runChase(elf: Elf)
 				break
 			end
 			lastSeenAt = os.clock() -- "Visible": they popped out in front of it; chase on
+			elf.humanoid.WalkSpeed = elf.chaseSpeed -- back to full speed after creeping up
 			continue
 		end
 		local targetPosition = target.root.Position
@@ -602,7 +679,7 @@ local function runChase(elf: Elf)
 			lastSeenPosition = targetPosition
 			pathPoints, pathTried = nil, false
 			elf.humanoid:MoveTo(targetPosition)
-		elseif now - lastSeenAt > guards.GiveUpAfterLostSightSeconds then
+		elseif now - lastSeenAt > lostSightLimit then
 			break
 		elseif lastSeenPosition then
 			-- Lost sight: path around the corner to where it last saw you.
@@ -646,6 +723,170 @@ local function runChase(elf: Elf)
 	end
 end
 
+----------------------------------------------------------------------------------------------------
+-- Snowman Camera (step 3.5, section 4). Placeholder snowman built from parts until Phase 5 art.
+
+-- Every patrolling elf in the zone hears the bell and runs to where the snowman saw the player.
+local function soundAlarm(zone: number, player: Player, position: Vector3)
+	local now = os.clock()
+	for _, elf in elves do
+		local ignoredUntil = elf.ignoreUntil[player]
+		if elf.zone == zone and elf.state == "Patrol" and elf.model.Parent and not (ignoredUntil and now < ignoredUntil) then
+			elf.alarmPosition = position
+			elf.target = player
+			elf.state = "Chase"
+		end
+	end
+end
+
+local function snowPart(model: Model, name: string, shape: Enum.PartType, size: Vector3, offset: CFrame, base: CFrame, color: Color3, material: Enum.Material): BasePart
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Shape = shape
+	part.Size = size
+	part.CFrame = base * offset
+	part.Color = color
+	part.Material = material
+	part.Anchored = true
+	part.CanCollide = name == "Base" -- you bump into the snowman, not its hat
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CastShadow = true
+	part.Parent = model
+	return part
+end
+
+local function buildSnowman(spot: BasePart, zone: number): Snowman?
+	local area = zoneAreas[zone]
+	local settings = Config.Guards.SnowmanCamera
+	local floorY = spot.Position.Y + spot.Size.Y / 2
+	local at = Vector3.new(spot.Position.X, floorY, spot.Position.Z)
+	-- Face the middle of the room (the spots themselves all face -Z).
+	local middle = if area then area.Position else at + spot.CFrame.LookVector
+	local base = CFrame.lookAt(at, Vector3.new(middle.X, floorY, middle.Z))
+	local model = Instance.new("Model")
+	model.Name = `SnowmanCamera_Zone{zone}`
+	local white = Color3.fromRGB(245, 248, 255)
+	local snow = Enum.Material.Snow
+	local ball = Enum.PartType.Ball
+	local bottom = snowPart(model, "Base", ball, Vector3.one * 4.4, CFrame.new(0, 2.2, 0), base, white, snow)
+	snowPart(model, "Middle", ball, Vector3.one * 3.2, CFrame.new(0, 5.3, 0), base, white, snow)
+	local head = snowPart(model, "Head", ball, Vector3.one * 2.4, CFrame.new(0, 7.7, 0), base, white, snow)
+	local black = Color3.fromRGB(20, 20, 24)
+	snowPart(model, "EyeL", ball, Vector3.one * 0.35, CFrame.new(-0.42, 8.0, -1.05), base, black, Enum.Material.SmoothPlastic)
+	snowPart(model, "EyeR", ball, Vector3.one * 0.35, CFrame.new(0.42, 8.0, -1.05), base, black, Enum.Material.SmoothPlastic)
+	snowPart(model, "Nose", Enum.PartType.Block, Vector3.new(0.3, 0.3, 1), CFrame.new(0, 7.7, -1.5), base, Color3.fromRGB(255, 140, 40), Enum.Material.SmoothPlastic)
+	snowPart(model, "Hat", Enum.PartType.Cylinder, Vector3.new(1.4, 1.8, 1.8), CFrame.new(0, 9.4, 0) * CFrame.Angles(0, 0, math.rad(90)), base, black, Enum.Material.SmoothPlastic)
+	local lantern = snowPart(model, "Lantern", Enum.PartType.Block, Vector3.one * 0.8, CFrame.new(1.9, 5.4, -1.3), base, Color3.fromRGB(255, 210, 90), Enum.Material.Neon)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255, 200, 120)
+	light.Range = 12
+	light.Brightness = 1.5
+	light.Parent = lantern
+	model.PrimaryPart = bottom
+
+	-- Its sight drawn on the floor, like an elf's cone; turns with the snowman.
+	local cone: { BasePart } = {}
+	local apex = Vector3.new(at.X, floorY + 0.08, at.Z)
+	local forward = base.LookVector
+	local half = math.rad(settings.visionAngle / 2)
+	local slices = Config.Guards.ConeSlices
+	local points: { Vector3 } = {}
+	for i = 0, slices do
+		local theta = -half + (2 * half) * i / slices
+		table.insert(points, apex + CFrame.Angles(0, theta, 0):VectorToWorldSpace(forward) * settings.visionRange)
+	end
+	for i = 1, slices do
+		triangle(apex, points[i], points[i + 1], model, cone)
+	end
+	for _, part in cone do
+		part.Anchored = true
+	end
+
+	-- "DING DING!" over its hat when it rings (AlwaysOnTop off: screen_capture can't see it on).
+	local bell = Instance.new("BillboardGui")
+	bell.Name = "Bell"
+	bell.Size = UDim2.fromScale(6, 2)
+	bell.StudsOffset = Vector3.new(0, 3, 0)
+	bell.AlwaysOnTop = false
+	bell.Enabled = false
+	local text = Instance.new("TextLabel")
+	text.Name = "Text"
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.TextScaled = true
+	text.Font = Enum.Font.FredokaOne
+	text.TextColor3 = Color3.fromRGB(255, 72, 64)
+	text.TextStrokeTransparency = 0
+	text.Text = "DING DING!"
+	text.Parent = bell
+	bell.Parent = head
+
+	model.Parent = folder -- inside Guards: sight rays skip it, like elves
+	return {
+		model = model,
+		head = head,
+		base = base * CFrame.new(0, 2.2, 0), -- pivot = the base ball's centre
+		zone = zone,
+		cone = cone,
+		bell = bell,
+		ringUntil = 0,
+		cooldown = setmetatable({}, { __mode = "k" }) :: any,
+	}
+end
+
+local function setSnowmanRinging(snowman: Snowman, on: boolean)
+	snowman.bell.Enabled = on
+	for _, part in snowman.cone do
+		part.Color = if on then CONE_CHASE_COLOR else CONE_PATROL_COLOR
+	end
+end
+
+-- Turns every snowman left and right: sweepDegrees in total, one edge to the other in sweepSeconds.
+local function sweepLoop()
+	local settings = Config.Guards.SnowmanCamera
+	local amplitude = math.rad(settings.sweepDegrees / 2)
+	local period = settings.sweepSeconds * 2
+	while true do
+		local now = os.clock()
+		local yaw = amplitude * math.sin(2 * math.pi * now / period)
+		for _, snowman in snowmen do
+			if snowman.model.Parent then
+				snowman.model:PivotTo(snowman.base * CFrame.Angles(0, yaw, 0))
+				if snowman.bell.Enabled and now >= snowman.ringUntil then
+					setSnowmanRinging(snowman, false)
+				end
+			end
+		end
+		task.wait(1 / 30)
+	end
+end
+
+-- One sight check for one snowman: rings for the first player it sees (not a still gift box).
+local function snowmanLook(snowman: Snowman)
+	local settings = Config.Guards.SnowmanCamera
+	local now = os.clock()
+	local origin = snowman.model:GetPivot()
+	for _, player in Players:GetPlayers() do
+		local target = liveTarget(player)
+		local cooldownEnd = snowman.cooldown[player]
+		if target and not (cooldownEnd and now < cooldownEnd) and not DisguiseService:IsDisguised(player) then
+			local position = target.root.Position
+			if
+				insideZone(snowman.zone, position)
+				and coneContains(origin.Position, origin.LookVector, position, settings.visionRange, settings.visionAngle)
+				and lineOfSightFrom(snowman.head.Position, target.character)
+			then
+				snowman.cooldown[player] = now + settings.alarmCooldownSeconds
+				snowman.ringUntil = now + settings.bellShowSeconds
+				setSnowmanRinging(snowman, true)
+				soundAlarm(snowman.zone, player, position)
+				return
+			end
+		end
+	end
+end
+
 local function run(elf: Elf)
 	while elf.model.Parent do
 		if elf.state == "Chase" then
@@ -668,6 +909,11 @@ local function visionLoop()
 					elf.target = player
 					elf.state = "Chase"
 				end
+			end
+		end
+		for _, snowman in snowmen do
+			if snowman.model.Parent then
+				snowmanLook(snowman)
 			end
 		end
 	end
@@ -703,7 +949,9 @@ function GuardService:Start()
 		local routes = routesByZone[zone]
 		if settings and routes then
 			-- All of a zone's elves share its routes, spread out evenly along them.
-			local count = random:NextInteger(settings.elvesMin, settings.elvesMax)
+			-- Head Elves (zone 3) walk the same routes, as extra elves.
+			local regular = random:NextInteger(settings.elvesMin, settings.elvesMax)
+			local count = regular + settings.headElves
 			local routeList: { Route } = {}
 			for _, route in routes do
 				if #route >= 2 then
@@ -714,7 +962,7 @@ function GuardService:Start()
 				local route = routeList[(i - 1) % #routeList + 1]
 				if route then
 					local startIndex = math.floor((i - 1) * #route / count) % #route + 1
-					local elf = spawnElf(template, zone, route, startIndex)
+					local elf = spawnElf(template, zone, route, startIndex, i > regular)
 					if elf then
 						table.insert(elves, elf)
 						task.spawn(run, elf)
@@ -723,8 +971,34 @@ function GuardService:Start()
 			end
 		end
 	end
+	-- Snowman Cameras stand on SnowmanCameraSpot parts (Zone attribute), up to the zone's count.
+	local spotsByZone: { [number]: { BasePart } } = {}
+	for _, spot in CollectionService:GetTagged("SnowmanCameraSpot") do
+		local zone = spot:GetAttribute("Zone")
+		if spot:IsA("BasePart") and type(zone) == "number" then
+			spotsByZone[zone] = spotsByZone[zone] or {}
+			table.insert(spotsByZone[zone], spot)
+		end
+	end
+	for zone = 1, Config.LaunchZones do
+		local wanted = Config.Guards.ByZone[zone].snowmanCameras
+		local spots = spotsByZone[zone] or {}
+		table.sort(spots, function(a, b)
+			return ((a:GetAttribute("Index") or 0) :: number) < ((b:GetAttribute("Index") or 0) :: number)
+		end)
+		if #spots < wanted then
+			warn(`[GuardService] zone {zone} wants {wanted} Snowman Camera(s) but has {#spots} SnowmanCameraSpot(s)`)
+		end
+		for i = 1, math.min(wanted, #spots) do
+			local snowman = buildSnowman(spots[i], zone)
+			if snowman then
+				table.insert(snowmen, snowman)
+			end
+		end
+	end
+	task.spawn(sweepLoop)
 	task.spawn(visionLoop)
-	print(`[GuardService] {#elves} elves on patrol`)
+	print(`[GuardService] {#elves} elves on patrol, {#snowmen} snowman camera(s)`)
 end
 
 return GuardService
