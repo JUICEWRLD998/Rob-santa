@@ -464,6 +464,16 @@ function PresentService:CarriedTooFast(player: Player, position: Vector3): boole
 end
 
 -- How many presents the player is carrying right now.
+-- The present models on this player's back (the disguise hides them inside the box).
+function PresentService:GetCarriedModels(player: Player): { Model }
+	local models: { Model } = {}
+	local list: { Present } = carriedBy[player] or {}
+	for _, present in list do
+		table.insert(models, present.model)
+	end
+	return models
+end
+
 function PresentService:GetCarriedCount(player: Player): number
 	local list = carriedBy[player]
 	return if list then #list else 0

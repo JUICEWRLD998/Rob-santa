@@ -120,6 +120,16 @@ local Config = {
 		MaxSeconds = 6,
 		CooldownSeconds = 8,
 		InspectSeconds = 3, -- normal elf; Head Elf uses Guards.HeadElf.inspectSeconds
+		MoveCancelStuds = 1.2, -- (my pick) drifting further than this from where you wrapped = you moved
+		MoveCheckSeconds = 0.1, -- (my pick) how often the server checks that you're still
+		BoxScale = 2.2, -- (my pick) disguise box size vs a zone present (2 studs): 4.4 studs hides an avatar
+		InspectReachStuds = 4, -- (my pick) a chasing elf stops this close to the box to sniff it
+		InspectWalkMaxSeconds = 6, -- (my pick) gives up walking to the box after this long (blocked)
+		FooledIgnoreSeconds = 5, -- (my pick) a fooled elf leaves you alone this long, so popping out
+		-- right after "Just a present" doesn't restart the chase on the spot
+		HideoutRefillPadding = 2, -- (my pick) studs around the hideout's box that count as "touching" it
+		RequestCooldownSeconds = 0.3, -- (my pick) rate limit on RequestDisguise
+		HuhShowSeconds = 2.5, -- (my pick) "...Huh. Just a present." stays this long
 	},
 
 	-- Section 6: shelves and offline income.

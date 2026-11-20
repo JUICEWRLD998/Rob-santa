@@ -35,6 +35,17 @@ export type UnwrapResult = {
 -- Sent server -> client on JailUpdate.
 --   Caught: play the "NAUGHTY!" stamp. Jailed: show the panel (endsAt is server time, from
 --   workspace:GetServerTimeNow()). Free: hide everything.
+-- Sent server -> client on DisguiseUpdate (3.4).
+--   Wrapped: you're a box until `endsAt`.  Inspected: an elf is sniffing you, don't move.
+--   Fooled: the elf gave up ("Just a present").  Gotcha: you moved while sniffed.
+--   Ended: you're yourself again; the next disguise is ready at `readyAt`.
+export type DisguiseState = "Wrapped" | "Inspected" | "Fooled" | "Gotcha" | "Ended"
+export type DisguiseUpdate = {
+	state: DisguiseState,
+	endsAt: number?, -- server time
+	readyAt: number?, -- server time
+}
+
 export type JailState = "Caught" | "Jailed" | "Free"
 export type JailUpdate = {
 	state: JailState,
