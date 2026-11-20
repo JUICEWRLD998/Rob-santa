@@ -169,6 +169,7 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 
 - Caught = a short "NAUGHTY!" stamp animation, then you're in a coal-mine cell.
 - **Three ways out:** wait 20 seconds; **mine 8 coal lumps** (tap rocks) to leave early; or pay 15 Robux (**Bail Out**).
+- The 8 rocks glow and sit in a ring a few steps around you, and a line at the bottom of the screen says how to mine. The jail panel sits at the top, never over your character. Mined rocks fade.
 - Coal you mine is kept. Coal buys **Naughty gadgets** later and can open missed Advent Calendar doors.
 - No coins are lost. You only lose the present you were carrying. Losing toys for getting caught would make kids quit.
 
