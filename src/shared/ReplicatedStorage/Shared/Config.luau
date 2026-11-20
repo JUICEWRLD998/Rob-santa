@@ -108,6 +108,17 @@ local Config = {
 		Max = 20,
 		CostBase = 500, -- cost = CostBase * CostGrowth ^ (shelves bought)
 		CostGrowth = 1.8,
+		IncomeTickSeconds = 1, -- shelved toys pay every this many seconds
+		PromptDistance = 8, -- (my pick) "Put on shelf" / "Sell" prompt range, studs
+		PromptDistanceSlack = 4, -- (my pick) extra studs the server allows for lag
+		PlaceHoldSeconds = 0.3, -- (my pick)
+		SellHoldSeconds = 0.6, -- (my pick) a little longer, so nobody sells by accident
+		InactiveTransparency = 0.75, -- (my pick) how see-through a not-yet-bought shelf slot looks
+	},
+	-- Town Square dealer: buys every toy waiting on your unwrap table (not shelved ones).
+	BlackMarket = {
+		PromptDistance = 14, -- (my pick) the stall is big, so the prompt reaches further
+		HoldSeconds = 0.5, -- (my pick)
 	},
 	Offline = {
 		MaxHours = 2,
