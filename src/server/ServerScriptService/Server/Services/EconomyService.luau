@@ -24,6 +24,11 @@ local function setupLeaderstats(player: Player)
 	coins.Value = 0
 	coins.Parent = stats
 	stats.Parent = player
+	-- The HUD reads this attribute, so it keeps working when Phase 4 replaces the leaderstat.
+	player:SetAttribute("Coins", coins.Value)
+	coins.Changed:Connect(function(value)
+		player:SetAttribute("Coins", value)
+	end)
 end
 
 function EconomyService:Init() end
