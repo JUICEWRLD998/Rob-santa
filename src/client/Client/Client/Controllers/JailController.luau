@@ -65,6 +65,17 @@ local function setRockPrompts()
 	end
 end
 
+-- Since 2026-11-21 the jail panel sits in the top bar, in the HUD's Wraps box spot (no wrapping in
+-- jail), so nothing covers the middle of the screen while you mine.
+local function setWrapsShown(shown: boolean)
+	local playerGui = player:FindFirstChild("PlayerGui")
+	local hud = playerGui and playerGui:FindFirstChild("HudGui")
+	local wraps = hud and hud:FindFirstChild("Wraps")
+	if wraps and wraps:IsA("GuiObject") then
+		wraps.Visible = shown
+	end
+end
+
 local function slamStamp()
 	stamp.Visible = true
 	stampScale.Scale = STAMP_START_SCALE
@@ -129,19 +140,18 @@ local function onUpdate(value: any)
 		local left = math.max(0, needed - coal)
 		local h = hint
 		if h then
-			h.Text = `Walk to a glowing coal rock and hold Mine. {left} more and you're out!`
-			h.Visible = true
+			-- Short: it is the panel's small third line (the Mine prompt explains the rest).
+			h.Text = if left == 1 then "Mine 1 more glowing rock" else `Mine {left} glowing rocks`
 		end
 		hideStamp()
 		panel.Visible = true
+		setWrapsShown(false)
 		startTimer()
 	elseif state == "Free" then
 		minedRocks = nil
 		panel.Visible = false
+		setWrapsShown(true)
 		hideStamp()
-	end
-	if state ~= "Jailed" and hint then
-		hint.Visible = false
 	end
 	setRockPrompts()
 end
@@ -163,13 +173,10 @@ function JailController:Start()
 	panel = gui:WaitForChild("Panel") :: Frame
 	timerLabel = panel:WaitForChild("Timer") :: TextLabel
 	coalLabel = panel:WaitForChild("Coal") :: TextLabel
-	local hintLabel = gui:FindFirstChild("Hint")
+	local hintLabel = gui:FindFirstChild("Hint", true) -- inside Panel since 2026-11-21
 	hint = if hintLabel and hintLabel:IsA("TextLabel") then hintLabel else nil
 	stamp.Visible = false
 	panel.Visible = false
-	if hint then
-		hint.Visible = false
-	end
 
 	-- Rock prompts are made by the server; keep them hidden until we're jailed.
 	setRockPrompts()

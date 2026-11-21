@@ -88,6 +88,9 @@ Workspace/Map/Lights (5.1): cabin glows, Town lanterns, per-zone lights (invisib
 raycasts ignore them). Lighting settings are in docs/04 section 5. SnowController (client) draws snow.
 `Lighting.Technology` can't be read or set through `execute_luau` (lacks RobloxScript capability): the
 owner sets it by hand.
+Art (5.2) is decoration on top of the greybox: each Hideout has a `Decor` model (snow caps, windows,
+chimney, bulbs), all parts CanCollide/CanQuery/CanTouch off. Gameplay parts (tagged) keep their position
+and size; only Material/Color change. The Baseplate grid texture is hidden (Transparency 1), not deleted.
 ```
 - **Server-authoritative, always.** The client only sends intents through RemoteEvents. The server validates every remote: player state, distance, ownership, cooldowns, rate limits, and argument types. Coins, rolls, steals, sells, unlocks, jail and purchases happen only on the server.
 - Remotes are created by the server at boot under `ReplicatedStorage/Remotes`; the client uses `WaitForChild`.
