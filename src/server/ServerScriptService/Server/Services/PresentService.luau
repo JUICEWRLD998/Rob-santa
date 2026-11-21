@@ -17,6 +17,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local MovementService = require(script.Parent.MovementService)
+local ZoneService = require(script.Parent.ZoneService)
 
 local PRESENT_TAG = "Present" -- on every present model, so the client can find their prompts
 local CARRY_MODIFIER = "carry"
@@ -154,6 +155,10 @@ local function tryGrab(player: Player, present: Present)
 	if (root.Position - present.box.Position).Magnitude > maxDistance then
 		return
 	end
+	-- 4.2: only owners of a zone can take its loot, even if they got past the barrier somehow.
+	if not ZoneService:OwnsZone(player, present.zone) then
+		return
+	end
 	local list = carriedBy[player]
 	if not list or #list >= capacityOf(player) then
 		return
@@ -248,6 +253,13 @@ local function spawnAt(point: SpawnPoint)
 		return
 	end
 	box.Color = Config.Rarities[rarity].color
+	-- Every other part of the template is ribbon or bow (RibbonX/Z, BowL/R).
+	local ribbonColor = Config.Rarities[rarity].ribbonColor
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part ~= box then
+			part.Color = ribbonColor
+		end
+	end
 	model:SetAttribute("Rarity", rarity)
 	model:SetAttribute("Zone", point.zone)
 	CollectionService:AddTag(model, PRESENT_TAG)
@@ -464,6 +476,16 @@ function PresentService:CarriedTooFast(player: Player, position: Vector3): boole
 end
 
 -- How many presents the player is carrying right now.
+-- The present models on this player's back (the disguise hides them inside the box).
+function PresentService:GetCarriedModels(player: Player): { Model }
+	local models: { Model } = {}
+	local list: { Present } = carriedBy[player] or {}
+	for _, present in list do
+		table.insert(models, present.model)
+	end
+	return models
+end
+
 function PresentService:GetCarriedCount(player: Player): number
 	local list = carriedBy[player]
 	return if list then #list else 0

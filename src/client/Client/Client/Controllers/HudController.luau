@@ -43,10 +43,13 @@ end
 function HudController:Init() end
 
 function HudController:Start()
-	local gui = player:WaitForChild("PlayerGui"):WaitForChild("HudGui", GUI_WAIT_SECONDS)
+	local playerGui = player:WaitForChild("PlayerGui")
+	local gui = playerGui:WaitForChild("HudGui", GUI_WAIT_SECONDS)
 	if not gui then
-		warn("[HudController] PlayerGui/HudGui is missing (StarterGui/HudGui in the place file)")
-		return
+		-- Slow devices can take longer than this to load the GUI: say so, then keep waiting
+		-- (giving up left the HUD dead for the whole session, seen in 3.4 testing).
+		warn("[HudController] still waiting for PlayerGui/HudGui (StarterGui/HudGui in the place file)")
+		gui = playerGui:WaitForChild("HudGui")
 	end
 	local amount = findLabel(gui, { "Coins", "Amount" })
 	local income = findLabel(gui, { "Coins", "Income" })
@@ -96,3 +99,4 @@ function HudController:Start()
 end
 
 return HudController
+

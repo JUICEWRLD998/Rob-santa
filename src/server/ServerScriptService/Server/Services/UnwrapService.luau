@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Toys = require(ReplicatedStorage.Shared.Toys)
 local Types = require(ReplicatedStorage.Shared.Types)
+local IndexService = require(script.Parent.IndexService)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
 local ShelfService = require(script.Parent.ShelfService)
@@ -106,6 +107,7 @@ local function unwrapOne(player: Player, present: PresentService.Delivered)
 	end
 	local result: Types.UnwrapResult = { toyId = toy.id, rarity = toy.rarity, mutation = mutation }
 	unwrapReveal:FireClient(player, result)
+	IndexService:Record(player, toy.id, mutation) -- step 4.4: first find pays a bonus
 end
 
 -- Unwraps one present at a time, in delivery order.

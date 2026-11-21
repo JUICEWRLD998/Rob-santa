@@ -69,6 +69,11 @@ local function play(ui: Card, result: Types.UnwrapResult)
 	ui.rarity.TextColor3 = color
 	ui.stroke.Color = color
 	ui.mutation.Text = if result.mutation then `{result.mutation}!` else ""
+	for _, entry in Config.Mutations do
+		if entry.name == result.mutation then
+			ui.mutation.TextColor3 = entry.color -- step 4.3: each mutation has its own stamp colour
+		end
+	end
 
 	local target = 1 + (tierOf(result.rarity) - 1) * Config.Reveal.ScalePerTier
 	ui.scale.Scale = 0.4

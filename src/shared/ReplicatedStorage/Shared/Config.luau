@@ -29,21 +29,23 @@ local Config = {
 	-- Section 6: rarity values. Sell price = 45 seconds of shelf income.
 	-- grabHoldSeconds: doc says "0.5s Common, up to 2s Mythic"; the steps between are (my pick).
 	-- Colours follow docs/04 wrappings (Mythic is a rainbow ribbon; this is its base colour).
+	-- ribbonColor (my pick, step 4.3): ribbon and bow on the present, picked to stand out on each paper.
 	Rarities = {
-		Common = { incomePerSecond = 1, sellPrice = 45, carrySlowdown = 0, grabHoldSeconds = 0.5, color = Color3.fromRGB(176, 133, 90) },
-		Uncommon = { incomePerSecond = 4, sellPrice = 180, carrySlowdown = 1, grabHoldSeconds = 0.8, color = Color3.fromRGB(70, 185, 90) },
-		Rare = { incomePerSecond = 15, sellPrice = 675, carrySlowdown = 2, grabHoldSeconds = 1.1, color = Color3.fromRGB(60, 130, 235) },
-		Epic = { incomePerSecond = 60, sellPrice = 2700, carrySlowdown = 3, grabHoldSeconds = 1.4, color = Color3.fromRGB(150, 80, 220) },
-		Legendary = { incomePerSecond = 250, sellPrice = 11250, carrySlowdown = 4, grabHoldSeconds = 1.7, color = Color3.fromRGB(245, 190, 40) },
-		Mythic = { incomePerSecond = 1000, sellPrice = 45000, carrySlowdown = 5, grabHoldSeconds = 2.0, color = Color3.fromRGB(255, 80, 160) },
+		Common = { incomePerSecond = 1, sellPrice = 45, carrySlowdown = 0, grabHoldSeconds = 0.5, color = Color3.fromRGB(176, 133, 90), ribbonColor = Color3.fromRGB(230, 215, 180) },
+		Uncommon = { incomePerSecond = 4, sellPrice = 180, carrySlowdown = 1, grabHoldSeconds = 0.8, color = Color3.fromRGB(70, 185, 90), ribbonColor = Color3.fromRGB(205, 35, 45) },
+		Rare = { incomePerSecond = 15, sellPrice = 675, carrySlowdown = 2, grabHoldSeconds = 1.1, color = Color3.fromRGB(60, 130, 235), ribbonColor = Color3.fromRGB(240, 244, 255) },
+		Epic = { incomePerSecond = 60, sellPrice = 2700, carrySlowdown = 3, grabHoldSeconds = 1.4, color = Color3.fromRGB(150, 80, 220), ribbonColor = Color3.fromRGB(250, 205, 70) },
+		Legendary = { incomePerSecond = 250, sellPrice = 11250, carrySlowdown = 4, grabHoldSeconds = 1.7, color = Color3.fromRGB(245, 190, 40), ribbonColor = Color3.fromRGB(190, 25, 40) },
+		Mythic = { incomePerSecond = 1000, sellPrice = 45000, carrySlowdown = 5, grabHoldSeconds = 2.0, color = Color3.fromRGB(255, 80, 160), ribbonColor = Color3.fromRGB(255, 255, 255) },
 	} :: { [Types.Rarity]: Types.RarityDef },
 
 	-- Section 6: mutations, rolled at unwrap, at most one. Chance is a fraction (0.1 = 10%).
+	-- color (my pick, step 4.3): the mutation stamp on the reveal card. Toy looks: Lib/ToyModel.
 	Mutations = {
-		{ name = "Golden" :: Types.Mutation, chance = 0.005, incomeMultiplier = 5 },
-		{ name = "Glowing" :: Types.Mutation, chance = 0.02, incomeMultiplier = 3 },
-		{ name = "Gingerbread" :: Types.Mutation, chance = 0.05, incomeMultiplier = 2 },
-		{ name = "Frosted" :: Types.Mutation, chance = 0.10, incomeMultiplier = 1.5 },
+		{ name = "Golden" :: Types.Mutation, chance = 0.005, incomeMultiplier = 5, color = Color3.fromRGB(255, 205, 70) },
+		{ name = "Glowing" :: Types.Mutation, chance = 0.02, incomeMultiplier = 3, color = Color3.fromRGB(120, 255, 200) },
+		{ name = "Gingerbread" :: Types.Mutation, chance = 0.05, incomeMultiplier = 2, color = Color3.fromRGB(215, 140, 75) },
+		{ name = "Frosted" :: Types.Mutation, chance = 0.10, incomeMultiplier = 1.5, color = Color3.fromRGB(150, 215, 255) },
 	},
 
 	-- Sections 2 + 6: zones. Weights are percent per present, in RarityOrder.
@@ -91,16 +93,50 @@ local Config = {
 	-- Section 4: guards.
 	Guards = {
 		PatrolWalkSpeed = 8,
+		PatrolPauseSeconds = 1.2, -- (my pick) stands still at each waypoint, like it's looking around
+		PatrolStuckSeconds = 2, -- (my pick) no progress for this long = blocked: path around the obstacle
 		ChaseMaxSeconds = 8,
 		GiveUpAfterLostSightSeconds = 3,
 		VisionChecksPerSecond = 5,
+		-- visionAngle below is the cone's FULL width (70 = 35 degrees each side of where it faces).
+		ChaseTickSeconds = 0.2, -- (my pick) how often a chasing elf re-aims at you
+		CatchDistance = 3.5, -- (my pick) studs between elf and player that count as "touching"
+		HeyShowSeconds = 1.2, -- (my pick) "HEY!" over its head, then just "!" for the rest of the chase
+		CaughtIgnoreSeconds = 5, -- after a catch the elf ignores you this long (covers the stamp moment)
+		GiveUpCooldownSeconds = 3, -- (my pick) after a chase ends the elf ignores that player this long,
+		-- or the 8 s chase limit means nothing: it would re-spot you the same instant (found in 3.2 testing)
+		ConeSlices = 8, -- (my pick) triangles per floor cone; more = smoother edge
+		ConeTransparency = 0.6, -- (my pick) 0.72 faded into the pale Zone 1 floor at player height
 		ByZone = {
 			[1] = { visionRange = 28, visionAngle = 70, chaseSpeed = 13, elvesMin = 1, elvesMax = 2, snowmanCameras = 0, headElves = 0 },
 			[2] = { visionRange = 32, visionAngle = 80, chaseSpeed = 14, elvesMin = 3, elvesMax = 3, snowmanCameras = 1, headElves = 0 },
 			[3] = { visionRange = 36, visionAngle = 90, chaseSpeed = 15, elvesMin = 3, elvesMax = 3, snowmanCameras = 2, headElves = 1 },
 		},
-		HeadElf = { chaseSpeed = 17, inspectSeconds = 5 },
-		SnowmanCamera = { sweepDegrees = 90, sweepSeconds = 4, visionRange = 40, visionAngle = 50, alarmChaseSeconds = 5 },
+		HeadElf = {
+			chaseSpeed = 17,
+			inspectSeconds = 5,
+			scale = 1.3, -- (my pick) "taller": the whole elf at 1.3x
+		},
+		SnowmanCamera = {
+			sweepDegrees = 90, -- full turn, left edge to right edge
+			sweepSeconds = 4, -- one sweep from one edge to the other
+			visionRange = 40,
+			visionAngle = 50,
+			alarmChaseSeconds = 5, -- every elf in the zone chases this long after the bell
+			alarmCooldownSeconds = 8, -- (my pick) one snowman rings for the same player at most this often
+			bellShowSeconds = 2, -- (my pick) "DING DING!" over the snowman and its cone stays red this long
+		},
+	},
+
+	-- Testing switches. They only work inside Roblox Studio (RunService:IsStudio()); a published
+	-- game ignores them completely.
+	Debug = {
+		-- true = Zone 2/3 barriers open for everyone in Studio playtests, as if every zone were
+		-- owned (quick zone testing). false since 4.2, so buying a zone can be tested.
+		OpenZonesInStudio = false,
+		-- ServerStorage/DebugData (a BindableFunction) lets Claude's Studio tests read a player's
+		-- save and set a field in it. Server-only: players can never reach ServerStorage.
+		DataHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -109,6 +145,17 @@ local Config = {
 		MaxSeconds = 6,
 		CooldownSeconds = 8,
 		InspectSeconds = 3, -- normal elf; Head Elf uses Guards.HeadElf.inspectSeconds
+		MoveCancelStuds = 1.2, -- (my pick) drifting further than this from where you wrapped = you moved
+		MoveCheckSeconds = 0.1, -- (my pick) how often the server checks that you're still
+		BoxScale = 2.2, -- (my pick) disguise box size vs a zone present (2 studs): 4.4 studs hides an avatar
+		InspectReachStuds = 4, -- (my pick) a chasing elf stops this close to the box to sniff it
+		InspectCreepStuds = 6, -- (my pick) for the last this-many studs it slows to walk speed (no shoving)
+		InspectWalkMaxSeconds = 6, -- (my pick) gives up walking to the box after this long (blocked)
+		FooledIgnoreSeconds = 5, -- (my pick) a fooled elf leaves you alone this long, so popping out
+		-- right after "Just a present" doesn't restart the chase on the spot
+		HideoutRefillPadding = 2, -- (my pick) studs around the hideout's box that count as "touching" it
+		RequestCooldownSeconds = 0.3, -- (my pick) rate limit on RequestDisguise
+		HuhShowSeconds = 2.5, -- (my pick) "...Huh. Just a present." stays this long
 	},
 
 	-- Section 6: shelves and offline income.
@@ -134,6 +181,12 @@ local Config = {
 		MaxHoursVip = 4,
 	},
 
+	-- Step 4.2: the Gadget Shop. Prices are in Upgrades, Shelves and Zones.
+	Shop = {
+		RequestCooldownSeconds = 0.25, -- (my pick) rate limit on RequestPurchase; a double tap buys once
+		PromptDistance = 14, -- (my pick) the shop counter is big, like the Black Market stall
+	},
+
 	-- Section 7: upgrades and gadgets.
 	Upgrades = {
 		Boots = { speedPerLevel = 1.5, costs = { 300, 900, 2700, 8000, 24000, 72000 } },
@@ -146,6 +199,10 @@ local Config = {
 	Jail = {
 		WaitSeconds = 20,
 		CoalToEscape = 8,
+		StampSeconds = 1.5, -- (my pick) the "NAUGHTY!" stamp plays this long, then you're in the cell
+		MineHoldSeconds = 0.5, -- (my pick) hold time on a coal rock's "Mine" prompt
+		MinePromptDistance = 8, -- (my pick) studs
+		MinePromptDistanceSlack = 4, -- (my pick) extra studs the server allows for lag
 	},
 
 	-- Section 9: social and events.
@@ -161,10 +218,34 @@ local Config = {
 		BountyFraction = 0.10, -- paid by the game, never taken from the target
 	},
 
+	-- docs/04 section 5 (step 5.1): light snowfall, drawn on each client above its own camera.
+	-- All (my pick). Rate is flakes per second; keep it low for phones.
+	Snow = {
+		Rate = 70,
+		AreaStuds = 90, -- width and depth of the snowing area around the camera
+		HeightAboveCamera = 30,
+		FallSpeed = { min = 5, max = 8 }, -- studs per second
+		FlakeSize = { min = 0.15, max = 0.3 },
+		LifetimeSeconds = 7,
+		OffBelowY = -20, -- no snow underground (Naughty Jail sits at y -60)
+	},
+
 	-- Section 6: Collection Index.
 	Index = {
-		ZoneCompleteIncomeBonus = 0.05,
+		ZoneCompleteIncomeBonus = 0.05, -- per completed page, added together (2 pages = +10%)
 		DiscoveryBonusSeconds = 60, -- (my pick) first find pays 60 s of that toy's shelf income
+		-- (my pick, step 4.4) A zone's page holds the toys of the rarities that first drop in
+		-- that zone (section 6 table). Mythic first drops in Zone 4 (Update 1); at launch it
+		-- comes only from Lucky Wrap and the Sleigh Raid.
+		Pages = {
+			{ zone = 1, rarities = { "Common", "Uncommon", "Rare" } :: { Types.Rarity } },
+			{ zone = 2, rarities = { "Epic" } :: { Types.Rarity } },
+			{ zone = 3, rarities = { "Legendary" } :: { Types.Rarity } },
+			{ zone = 4, rarities = { "Mythic" } :: { Types.Rarity } },
+		},
+		-- (my pick) false: a page is complete when every toy on it is found in ANY form.
+		-- true: every toy in every mutation (80 entries; Golden is 0.5%, so very slow).
+		PageNeedsAllMutations = false,
 	},
 
 	-- Section 10: Robux. Prices are display/reference only; IDs are added in Phase 6.

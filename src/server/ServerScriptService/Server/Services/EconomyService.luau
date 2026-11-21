@@ -1,11 +1,18 @@
 --!strict
--- Owns every coin change. Only the server ever changes coins.
--- TEMPORARY (step 1.2): coins live in a "Coins" leaderstat that starts at 0 and is NOT saved.
--- Phase 4 (DataService + ProfileStore) replaces the starting value with the player's saved data.
+-- Owns every coin and coal change. Only the server ever changes them.
+-- Since step 4.1 the numbers live in the player's saved data (DataService). This module shows
+-- them to the client: the "Coins" leaderstat (the player list) and the Coins / Coal attributes
+-- (the HUD and the jail panel). Those are display copies; changing them changes nothing.
+-- Until a player's data has loaded, every change is refused (returns false).
 
-local Players = game:GetService("Players")
+local DataService = require(script.Parent.DataService)
 
 local EconomyService = {}
+
+-- A positive whole number that isn't NaN or infinite.
+local function isValidAmount(amount: number): boolean
+	return amount == amount and amount > 0 and amount ~= math.huge and amount == math.floor(amount)
+end
 
 local function coinsValue(player: Player): IntValue?
 	local stats = player:FindFirstChild("leaderstats")
@@ -13,56 +20,77 @@ local function coinsValue(player: Player): IntValue?
 	return if coins and coins:IsA("IntValue") then coins else nil
 end
 
-local function setupLeaderstats(player: Player)
-	if player:FindFirstChild("leaderstats") then
+-- Copies the saved numbers onto the display copies the client reads.
+local function show(player: Player)
+	local data = DataService:GetData(player)
+	if not data or not player.Parent then
 		return
 	end
-	local stats = Instance.new("Folder")
-	stats.Name = "leaderstats" -- this exact name makes Roblox show it on the player list
-	local coins = Instance.new("IntValue")
-	coins.Name = "Coins"
-	coins.Value = 0
-	coins.Parent = stats
-	stats.Parent = player
-	-- The HUD reads this attribute, so it keeps working when Phase 4 replaces the leaderstat.
-	player:SetAttribute("Coins", coins.Value)
-	coins.Changed:Connect(function(value)
-		player:SetAttribute("Coins", value)
-	end)
+	local coins = coinsValue(player)
+	if coins then
+		coins.Value = data.coins
+	end
+	player:SetAttribute("Coins", data.coins)
+	player:SetAttribute("Coal", data.coal)
 end
 
-function EconomyService:Init() end
-
-function EconomyService:Start()
-	Players.PlayerAdded:Connect(setupLeaderstats)
-	-- Players who joined before Start ran (common in Studio playtests).
-	for _, player in Players:GetPlayers() do
-		task.spawn(setupLeaderstats, player)
+local function setupLeaderstats(player: Player)
+	if not player:FindFirstChild("leaderstats") then
+		local stats = Instance.new("Folder")
+		stats.Name = "leaderstats" -- this exact name makes Roblox show it on the player list
+		local coins = Instance.new("IntValue")
+		coins.Name = "Coins"
+		coins.Parent = stats
+		stats.Parent = player
 	end
+	show(player)
+end
+
+function EconomyService:Init()
+	-- Registered in Init so no player's load is missed (DataService:Start loads them).
+	DataService:OnLoaded(setupLeaderstats)
 end
 
 function EconomyService:GetCoins(player: Player): number
-	local coins = coinsValue(player)
-	return if coins then coins.Value else 0
+	local data = DataService:GetData(player)
+	return if data then data.coins else 0
 end
 
 -- Adds a positive whole number of coins. Returns false (and changes nothing) if it can't.
 function EconomyService:AddCoins(player: Player, amount: number): boolean
-	local coins = coinsValue(player)
-	if not coins or amount ~= amount or amount <= 0 or amount ~= math.floor(amount) or amount == math.huge then
+	local data = DataService:GetData(player)
+	if not data or not isValidAmount(amount) then
 		return false
 	end
-	coins.Value += amount
+	data.coins += amount
+	show(player)
 	return true
 end
 
 -- Spends coins only if the player can afford it. Check and spend happen with no yield between.
 function EconomyService:TrySpend(player: Player, amount: number): boolean
-	local coins = coinsValue(player)
-	if not coins or amount ~= amount or amount <= 0 or amount ~= math.floor(amount) or coins.Value < amount then
+	local data = DataService:GetData(player)
+	if not data or not isValidAmount(amount) or data.coins < amount then
 		return false
 	end
-	coins.Value -= amount
+	data.coins -= amount
+	show(player)
+	return true
+end
+
+-- Coal: mined in Naughty Jail, kept forever, spent later on Naughty gadgets and Advent doors.
+function EconomyService:GetCoal(player: Player): number
+	local data = DataService:GetData(player)
+	return if data then data.coal else 0
+end
+
+function EconomyService:AddCoal(player: Player, amount: number): boolean
+	local data = DataService:GetData(player)
+	if not data or not isValidAmount(amount) then
+		return false
+	end
+	data.coal += amount
+	show(player)
 	return true
 end
 

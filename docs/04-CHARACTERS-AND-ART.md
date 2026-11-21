@@ -122,6 +122,8 @@ Warm light against cool blue snow is the whole palette. It makes screenshots pop
 - **Atmosphere** for soft depth, light falling **snow particles**, a coloured skybox with stars.
 - PointLights in windows and lanterns. Every zone gets a light colour of its own (Factory = warm orange, Mine = cold purple-blue, Vault = gold).
 
+What was set in step 5.1 (place file; tune by eye in Studio): ClockTime 19.8, Brightness 2.2, Ambient 80,90,130, OutdoorAmbient 130,145,190 (raised after the owner found it too dark without Future lighting; phones fall back from Future too), moon top light 150,170,230, Exposure 0.2, the default sky with 3,000 stars and a bigger moon (16). Every DropMat is green Neon with a soft light, so your base reads at night. Atmosphere: Density 0.32, Haze 1.2, navy blue colour. Bloom 0.6 (threshold 1.8), SunRays off, a NightGrade colour correction (slightly cooler, +12% saturation). Lights live in `Workspace/Map/Lights`: a warm orange glow in each cabin, 8 lantern posts in the Town Square, 4 lights per zone (Zone 1 soft warm white, the Wrapping Room's own colour and my pick; Zone 2 warm orange; Zone 3 purple-blue) and one in each corridor. Light parts are invisible and have CanQuery off, so they never block elf vision or prompts. Snow: `SnowController` on each client, numbers in `Config.Snow`, off underground. **Technology = Future must be set by hand** (Lighting → Properties): Studio's MCP can't read or write that property.
+
 ### Shapes
 - Chunky, rounded, slightly oversized props (big candy canes, huge presents).
 - Clear silhouettes: you should recognise an elf, a present and a door from far away on a phone.

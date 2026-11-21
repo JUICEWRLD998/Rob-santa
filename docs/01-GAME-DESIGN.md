@@ -63,10 +63,10 @@ Presents respawn on fixed spawn points in each zone every 20–40 seconds (rando
 The guards are what make this a heist instead of a shopping trip.
 
 ### Elf Guard (zones 1–3)
-- **Patrol:** walks between waypoints in its zone at walk speed 8.
+- **Patrol:** walks between waypoints in its zone at walk speed 8, pausing about a second at each one (like it's looking around). Several elves in one zone share its route, spread out along it.
 - **Sight:** a vision cone (angle and range per zone, table below) plus a line-of-sight check (walls block sight). The cone is drawn on the floor as a soft translucent shape, so players can read it. This matters for kids and for phones.
 - **Seeing you:** if you're in the cone, in line of sight and *not* a still gift box, a "!" pops over its head and it says "HEY!". Then it **chases**.
-- **Chase:** runs at you (speed per zone) for up to 8 seconds. Gives up if it loses sight of you for 3 seconds, then walks back to patrol.
+- **Chase:** runs at you (speed per zone) for up to 8 seconds. Gives up if it loses sight of you for 3 seconds, then walks back to patrol. After giving up it ignores you for 3 seconds, so you get a real window to get away (otherwise it re-spots you instantly). **Elves guard their own room only:** they never chase past the zone edge, and stepping out of the zone counts as breaking sight.
 - **Catch:** touching you while chasing = caught. You go to Naughty Jail, and the present you carried returns to its zone.
 
 | Zone | Elf vision range | Vision angle | Chase speed | Elves |
@@ -143,13 +143,18 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 | Glowing | 2% | ×3 | Neon outline + soft light |
 | Golden | 0.5% | ×5 | Gold material + shine |
 
+How the looks work (step 4.3, placeholder toys until Phase 5): each mutation is a layer on top of the toy, so it carries over to the real toy meshes. Frosted = icy blue ice + drifting sparkles. Gingerbread = brown + a white icing band on top. Glowing = neon in the rarity colour + a light outline + a soft light. Golden = shiny gold foil + a warm glint + slow twinkles. The reveal card shows the mutation name in its own colour. Presents also get a ribbon colour per rarity, so the rarity reads from both the paper and the ribbon. Zones 2 and 3 use their own rarity tables (above) since step 2.1.
+
 ### Shelves
 - Start with 4 shelves. Buy more, up to 20. Cost: `500 × 1.8^(shelves bought)`.
 - Toys earn while you're offline, up to **2 hours** of income (4 hours with VIP). It's paid when you rejoin.
+- Saving (step 4.1): toys waiting on the unwrap table are saved too, not only shelved ones, so nothing is lost on rejoin. Offline time counts from the last save (every 5 minutes and on leaving). A saved toy whose shelf slot no longer exists goes back to the table.
 
 ### Collection Index
 - A book listing every toy × every mutation. Discovering a new entry pays a one-time coin bonus.
 - Completing a zone's page gives a badge and a permanent +5% income.
+
+How it works (step 4.4, my picks, all in `Config.Index`): an entry is one toy in one form (plain, or one of the 4 mutations), so 16 toys × 5 = 80 entries. The first find of an entry pays 60 seconds of that form's shelf income (a plain Wool Sock pays 60, a Golden Robot Buddy 18,000). A zone's page holds the toys whose rarity first drops in that zone: Wrapping Room = Common, Uncommon and Rare (9 toys); Toy Factory = Epic (3); Candy Cane Mine = Legendary (2); Reindeer Stables = Mythic (2, marked "coming soon" until Update 1, but Mythics found through Lucky Wrap or the Sleigh Raid still count). A page is complete when every toy on it is found in any form; the mutations are extra finds with their own coin bonus. Each completed page adds +5% to all shelf income, offline earnings included (2 pages = +10%). Toys already owned before 4.4 count as found, with no coin bonus. The page badge comes later. Open the Index with the INDEX button above SHOP on the left of the screen.
 
 ---
 
@@ -163,12 +168,15 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 | Snowball | Throw at an elf: stunned for 3s (8s cooldown). Throw at a player carrying a present: they drop it | 5,000 |
 | Big Sack | Carry 2 presents | Game pass (section 10) |
 
+How the shop works (step 4.2): the Gadget Shop counter and a SHOP button on the left of the HUD open the same screen. It also sells extra shelves and the Zone 2 / Zone 3 unlocks (Zone 3 needs Zone 2 first). A bought zone's barrier opens only for its owner. Quiet Steps shortens how far elves and snowman cameras can *notice* you (patrol and camera vision); an elf already chasing you still sees you at full range. The Snowball can be bought now; throwing it arrives with step 6.4.
+
 ---
 
 ## 8. Naughty Jail
 
 - Caught = a short "NAUGHTY!" stamp animation, then you're in a coal-mine cell.
 - **Three ways out:** wait 20 seconds; **mine 8 coal lumps** (tap rocks) to leave early; or pay 15 Robux (**Bail Out**).
+- The 8 rocks glow and sit in a ring a few steps around you, and a line at the bottom of the screen says how to mine. The jail panel sits at the top, never over your character. Mined rocks fade.
 - Coal you mine is kept. Coal buys **Naughty gadgets** later and can open missed Advent Calendar doors.
 - No coins are lost. You only lose the present you were carrying. Losing toys for getting caught would make kids quit.
 
