@@ -2,7 +2,7 @@
 -- Every unwrapped toy a player owns: the ones waiting on their unwrap table and the ones on their
 -- shelves (step 2.3, docs/01-GAME-DESIGN.md section 6).
 -- * A toy on the table has a "Put on shelf" prompt: it moves to the first free ACTIVE shelf slot.
---   4 slots are active at the start; buying more comes in step 4.2.
+--   4 slots are active at the start; more are bought in the Gadget Shop (ShopService, 4.2).
 -- * Shelved toys pay coins every IncomeTickSeconds: rarity income x mutation (ToyMath).
 -- * A shelved toy has a "Sell" prompt. The Black Market in the Town Square buys every toy on
 --   the table at once.
@@ -485,6 +485,18 @@ function ShelfService:AddUnwrapped(player: Player, owned: Types.OwnedToy): boole
 	layoutTable(player, state)
 	saveToys(player, state)
 	return true
+end
+
+-- Re-reads how many shelves the player owns (Config.Shelves.Start + shelves bought in the shop)
+-- and lights up the new slots. Called by ShopService after a shelf is bought.
+function ShelfService:RefreshShelfCount(player: Player)
+	local state = stateOf[player]
+	local data = DataService:GetData(player)
+	if not state or not data then
+		return -- not set up yet: onAssigned reads the count from the save when it is
+	end
+	state.activeShelves = math.min(Config.Shelves.Start + data.shelvesBought, Config.Shelves.Max)
+	applyShelfLook(state.index, state.activeShelves)
 end
 
 -- Coins per second from the player's shelves right now.

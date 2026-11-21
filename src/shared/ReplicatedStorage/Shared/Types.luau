@@ -55,6 +55,13 @@ export type JailUpdate = {
 	mined: { number }?, -- CoalRock Index values already mined this visit (their prompts hide)
 }
 
+-- Sent server -> client on ShopResult (4.2), after every RequestPurchase that passes the rate limit.
+export type ShopResult = {
+	itemId: string,
+	ok: boolean,
+	message: string, -- "Bought Boots level 2!" or why not
+}
+
 -- The contract every server Service and client Controller module follows.
 -- Init runs for all modules first (set up state, no yielding); Start runs after (may yield).
 export type Module = {

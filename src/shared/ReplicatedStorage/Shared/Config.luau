@@ -129,7 +129,9 @@ local Config = {
 	-- Testing switches. They only work inside Roblox Studio (RunService:IsStudio()); a published
 	-- game ignores them completely.
 	Debug = {
-		OpenZonesInStudio = true, -- Zone 2/3 barriers walk-through in Studio playtests (until 4.2 unlocks)
+		-- true = Zone 2/3 barriers open for everyone in Studio playtests, as if every zone were
+		-- owned (quick zone testing). false since 4.2, so buying a zone can be tested.
+		OpenZonesInStudio = false,
 		-- ServerStorage/DebugData (a BindableFunction) lets Claude's Studio tests read a player's
 		-- save and set a field in it. Server-only: players can never reach ServerStorage.
 		DataHookInStudio = true,
@@ -175,6 +177,12 @@ local Config = {
 	Offline = {
 		MaxHours = 2,
 		MaxHoursVip = 4,
+	},
+
+	-- Step 4.2: the Gadget Shop. Prices are in Upgrades, Shelves and Zones.
+	Shop = {
+		RequestCooldownSeconds = 0.25, -- (my pick) rate limit on RequestPurchase; a double tap buys once
+		PromptDistance = 14, -- (my pick) the shop counter is big, like the Black Market stall
 	},
 
 	-- Section 7: upgrades and gadgets.

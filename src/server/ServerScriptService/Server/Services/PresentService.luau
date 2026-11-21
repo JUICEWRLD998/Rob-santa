@@ -17,6 +17,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local MovementService = require(script.Parent.MovementService)
+local ZoneService = require(script.Parent.ZoneService)
 
 local PRESENT_TAG = "Present" -- on every present model, so the client can find their prompts
 local CARRY_MODIFIER = "carry"
@@ -152,6 +153,10 @@ local function tryGrab(player: Player, present: Present)
 	end
 	local maxDistance = Config.Presents.GrabDistance + Config.Presents.GrabDistanceSlack
 	if (root.Position - present.box.Position).Magnitude > maxDistance then
+		return
+	end
+	-- 4.2: only owners of a zone can take its loot, even if they got past the barrier somehow.
+	if not ZoneService:OwnsZone(player, present.zone) then
 		return
 	end
 	local list = carriedBy[player]

@@ -34,6 +34,7 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 - **`screen_capture` does not draw BillboardGuis with `AlwaysOnTop = true`** (2026-11-20, step 3.2). The elf's "HEY!" was enabled on the client and never appeared; a plain control sign failed the same way and passed with AlwaysOnTop off. Keep AlwaysOnTop off where a screenshot must prove the sign, or the check is blind.
 - **Before driving a playtest, check he isn't playing in it** (move a sample over a few seconds). Twice in 3.1/3.2 he was; my teleports and a Scriptable camera fought his controls. A custom-camera `screen_capture` also snaps back to his live camera while he moves.
 - Freeze an NPC for a screenshot with `HumanoidRootPart.Anchored = true` (it walks out of frame between tool calls), and release it after.
+- **A ProximityPrompt only shows while its part is on camera** (2026-11-20, step 4.2). After teleporting the character with `root.CFrame = ...`, the follow camera can end up between the character and the target, facing back, and the prompt stays hidden: E did nothing, which looked like a broken shop prompt. Before pressing a prompt key, point the camera at the target (`workspace.CurrentCamera.CFrame = CFrame.lookAt(behindCharacter, target)`) and confirm with `ProximityPromptService.PromptShown`.
 
 ## Skills and static checks (installed 2026-11-19)
 - **Project skills** in `.claude/skills/` (load them by name for any Roblox work):
@@ -62,7 +63,11 @@ src/client/  Main.local.luau (requires each module in Controllers/)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, temporary R15 rig, no scripts), later snowman
 Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by GuardService at boot
 (elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
-StarterGui (place file): RevealGui (2.2), HudGui (2.3); controllers fill and animate them, they don't build them
+StarterGui (place file): RevealGui (2.2), HudGui (2.3; ShopButton on the left, 4.2), ShopGui (4.2: Panel with
+Title, Coins, Status, Close, List/ItemTemplate); controllers fill and animate them, they don't build them
+Shop (4.2): Shared/ShopCatalog.luau (items + prices, shared like ToyMath) -> ShopService (RequestPurchase,
+item id only) -> Player attributes Shop_<ItemId> = owned level. GuardService reads Shop_QuietSteps,
+DisguiseService reads Shop_ExtraWrap, ZoneController reads Shop_Zone2/3; ZoneService:OwnsZone reads the save.
 Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond,
 Jailed (3.3), Coal (3.3). Coins/Coal (and the Coins leaderstat) are display copies EconomyService writes
 from the saved data (4.1). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden

@@ -164,6 +164,8 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 | Snowball | Throw at an elf: stunned for 3s (8s cooldown). Throw at a player carrying a present: they drop it | 5,000 |
 | Big Sack | Carry 2 presents | Game pass (section 10) |
 
+How the shop works (step 4.2): the Gadget Shop counter and a SHOP button on the left of the HUD open the same screen. It also sells extra shelves and the Zone 2 / Zone 3 unlocks (Zone 3 needs Zone 2 first). A bought zone's barrier opens only for its owner. Quiet Steps shortens how far elves and snowman cameras can *notice* you (patrol and camera vision); an elf already chasing you still sees you at full range. The Snowball can be bought now; throwing it arrives with step 6.4.
+
 ---
 
 ## 8. Naughty Jail

@@ -31,6 +31,7 @@ local REACH_DISTANCE = 2.5 -- studs (flat) that count as "arrived at the waypoin
 local CHECK_SECONDS = 0.25
 local PROGRESS_STUDS = 0.5 -- moving less than this between checks counts as no progress
 local CATCH_HEIGHT = 4 -- a player standing on cover this far above the elf can't be grabbed
+local QUIET_STEPS_ATTRIBUTE = "Shop_QuietSteps" -- ShopCatalog.attributeName("QuietSteps"), set by ShopService
 local INSPECT_STEP_SECONDS = 0.05 -- distance checks while creeping up on a gift box
 -- Roblox's default R15 walk and idle (read from a fresh rig's Animate script, 2026-11-20).
 -- Placeholder until the elf's own animations in Phase 5.
@@ -401,6 +402,17 @@ local function liveTarget(player: Player): Target?
 	return nil
 end
 
+-- How far `player` can be noticed from, out of `range`: Quiet Steps (Gadget Shop, 4.2) cuts it
+-- by visionReductionPerLevel per level. Only for NOTICING (patrol and snowman); once an elf is
+-- chasing you it sees you at its full range.
+local function noticeRange(player: Player, range: number): number
+	local level = player:GetAttribute(QUIET_STEPS_ATTRIBUTE)
+	if type(level) ~= "number" or level <= 0 then
+		return range
+	end
+	return range * math.max(0, 1 - Config.Upgrades.QuietSteps.visionReductionPerLevel * level)
+end
+
 -- The nearest player this patrolling elf can see right now, if any.
 local function findVisiblePlayer(elf: Elf): Player?
 	local settings = Config.Guards.ByZone[elf.zone]
@@ -414,7 +426,7 @@ local function findVisiblePlayer(elf: Elf): Player?
 			local position = target.root.Position
 			if
 				insideZone(elf.zone, position)
-				and inCone(elf, position, settings.visionRange, settings.visionAngle)
+				and inCone(elf, position, noticeRange(player, settings.visionRange), settings.visionAngle)
 				and hasLineOfSight(elf, target.character)
 			then
 				local distance = flatDistance(elf.root.Position, position)
@@ -874,7 +886,7 @@ local function snowmanLook(snowman: Snowman)
 			local position = target.root.Position
 			if
 				insideZone(snowman.zone, position)
-				and coneContains(origin.Position, origin.LookVector, position, settings.visionRange, settings.visionAngle)
+				and coneContains(origin.Position, origin.LookVector, position, noticeRange(player, settings.visionRange), settings.visionAngle)
 				and lineOfSightFrom(snowman.head.Position, target.character)
 			then
 				snowman.cooldown[player] = now + settings.alarmCooldownSeconds

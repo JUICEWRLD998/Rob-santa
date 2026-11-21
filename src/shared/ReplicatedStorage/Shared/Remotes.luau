@@ -15,14 +15,15 @@ export type Direction = "ServerToClient" | "ClientToServer"
 -- Add a remote here first, then use it. Typos fail loudly in Remotes.get.
 -- RULE (step 2.4 security review): add a ClientToServer remote in the SAME change as its
 -- validated server handler. A remote with no handler is still callable by exploiters, and the
--- server queues their events. Planned ones: RequestSnowball (6.4: throw intent, server picks the
--- target), RequestPurchase (4.2: item id only, never a price).
+-- server queues their events. Planned: RequestSnowball (6.4: throw intent, server picks the target).
 local EVENTS: { [string]: Direction } = {
 	UnwrapReveal = "ServerToClient", -- unwrap result: toy, rarity, mutation
 	Notify = "ServerToClient", -- banners and short messages
 	JailUpdate = "ServerToClient", -- jail timer and coal count
 	RequestDisguise = "ClientToServer", -- no arguments; DisguiseService validates (3.4)
 	DisguiseUpdate = "ServerToClient", -- disguise state for the button, camera and sounds
+	RequestPurchase = "ClientToServer", -- item id only, never a price; ShopService validates (4.2)
+	ShopResult = "ServerToClient", -- Types.ShopResult: bought or why not, for the shop screen
 }
 
 local Remotes = {}

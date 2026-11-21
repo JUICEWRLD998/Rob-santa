@@ -20,6 +20,7 @@ local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
 
 local WRAPS_ATTRIBUTE = "Wraps" -- on the Player; the HUD reads it
+local EXTRA_WRAP_ATTRIBUTE = "Shop_ExtraWrap" -- ShopCatalog.attributeName("ExtraWrap")
 local DISGUISED_ATTRIBUTE = "Disguised" -- on the Player while wrapped
 local BOX_NAME = "DisguiseBox"
 local PRESENT_SIZE = 2 -- studs, a zone present's box (Templates/Present.Box)
@@ -58,8 +59,14 @@ local function send(player: Player, state: Types.DisguiseState, disguise: Disgui
 	update:FireClient(player, payload)
 end
 
-local function maxWraps(_player: Player): number
-	return Config.Disguise.WrapsPerTrip -- Extra Wrap upgrades and Wrap Master (Phase 4/6) raise this
+-- Wraps per trip: the Extra Wrap level (ShopService sets the attribute), Wrap Master in Phase 6.
+local function maxWraps(player: Player): number
+	local level = player:GetAttribute(EXTRA_WRAP_ATTRIBUTE)
+	local byLevel = Config.Upgrades.ExtraWrap.wrapsByLevel
+	if type(level) == "number" and level >= 1 then
+		return byLevel[math.min(level, #byLevel)]
+	end
+	return Config.Disguise.WrapsPerTrip
 end
 
 local function wrapsOf(player: Player): number
@@ -290,6 +297,15 @@ function DisguiseService:Start()
 		lastRequest[player] = nil
 	end)
 	task.spawn(refillLoop)
+end
+
+-- Adds wraps right away when the per-trip number goes up (an Extra Wrap bought, or the saved
+-- level arriving after join), never above the new maximum.
+function DisguiseService:GrantExtraWraps(player: Player, amount: number)
+	if amount <= 0 or player.Parent == nil then
+		return
+	end
+	player:SetAttribute(WRAPS_ATTRIBUTE, math.min(wrapsOf(player) + amount, maxWraps(player)))
 end
 
 -- True while the player is a gift box (which also means they're holding still).
