@@ -218,6 +218,18 @@ local Config = {
 		BountyFraction = 0.10, -- paid by the game, never taken from the target
 	},
 
+	-- docs/04 section 5 (step 5.1): light snowfall, drawn on each client above its own camera.
+	-- All (my pick). Rate is flakes per second; keep it low for phones.
+	Snow = {
+		Rate = 70,
+		AreaStuds = 90, -- width and depth of the snowing area around the camera
+		HeightAboveCamera = 30,
+		FallSpeed = { min = 5, max = 8 }, -- studs per second
+		FlakeSize = { min = 0.15, max = 0.3 },
+		LifetimeSeconds = 7,
+		OffBelowY = -20, -- no snow underground (Naughty Jail sits at y -60)
+	},
+
 	-- Section 6: Collection Index.
 	Index = {
 		ZoneCompleteIncomeBonus = 0.05, -- per completed page, added together (2 pages = +10%)

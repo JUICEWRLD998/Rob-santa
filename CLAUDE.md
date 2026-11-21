@@ -84,6 +84,10 @@ Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompt
 Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and
 Studio stores LF, so compare `tr -d '\r' < file | wc -c`.
 Workspace/Map (place file): world, with CollectionService tags + attributes for gameplay spots
+Workspace/Map/Lights (5.1): cabin glows, Town lanterns, per-zone lights (invisible, CanQuery off so elf
+raycasts ignore them). Lighting settings are in docs/04 section 5. SnowController (client) draws snow.
+`Lighting.Technology` can't be read or set through `execute_luau` (lacks RobloxScript capability): the
+owner sets it by hand.
 ```
 - **Server-authoritative, always.** The client only sends intents through RemoteEvents. The server validates every remote: player state, distance, ownership, cooldowns, rate limits, and argument types. Coins, rolls, steals, sells, unlocks, jail and purchases happen only on the server.
 - Remotes are created by the server at boot under `ReplicatedStorage/Remotes`; the client uses `WaitForChild`.
@@ -94,6 +98,7 @@ Workspace/Map (place file): world, with CollectionService tags + attributes for 
 - **Purchases:** `ProcessReceipt` must grant each purchase exactly once (record the PurchaseId in the profile before returning PurchaseGranted).
 - **Paid random items:** Lucky Wrap changes a random roll, so treat it as a paid random item. Show the odds in the UI before purchase, and check `PolicyService:GetPolicyInfoForPlayerAsync(...).ArePaidRandomItemsRestricted`. Hide the product where it's restricted.
 - NPC guards: server network ownership, own collision group, PathfindingService for chases, raycast line-of-sight, vision checks ~5×/sec (not every frame).
+- **A controller that needs a ScreenGui must never give up waiting for it.** `WaitForChild(name, 15)`, then warn, then `WaitForChild(name)` with no timeout. On a slow join PlayerGui filled after more than 15 s, and Shop/Index (built 4.2/4.4) had returned early, so the SHOP and INDEX buttons stayed dead for the whole session (2026-11-21, the same bug 3.4 fixed in HudController).
 - Every action must work on **phone** (ProximityPrompts, ContextActionService buttons), PC and console.
 
 ## Luau style

@@ -239,12 +239,18 @@ function ShopController:Init() end
 
 function ShopController:Start()
 	local playerGui = player:WaitForChild("PlayerGui")
-	local gui = playerGui:WaitForChild("ShopGui", GUI_WAIT_SECONDS)
-	local hud = playerGui:WaitForChild("HudGui", GUI_WAIT_SECONDS)
-	if not gui or not hud then
-		warn("[ShopController] PlayerGui/ShopGui or HudGui is missing (StarterGui in the place file)")
-		return
+	-- Slow joins can take longer than GUI_WAIT_SECONDS to fill PlayerGui: warn, then keep waiting.
+	-- Giving up left the SHOP button dead for the whole session (seen 2026-11-21, like 3.4's HUD).
+	local function waitForGui(name: string): Instance
+		local found = playerGui:WaitForChild(name, GUI_WAIT_SECONDS)
+		if not found then
+			warn(`[ShopController] still waiting for PlayerGui/{name} (StarterGui in the place file)`)
+			found = playerGui:WaitForChild(name)
+		end
+		return found :: Instance
 	end
+	local gui = waitForGui("ShopGui")
+	local hud = waitForGui("HudGui")
 	local foundPanel = gui:FindFirstChild("Panel")
 	local list = foundPanel and foundPanel:FindFirstChild("List")
 	local template = list and list:FindFirstChild("ItemTemplate")

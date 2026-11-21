@@ -206,12 +206,18 @@ function IndexController:Start()
 	Remotes.get("IndexSync").OnClientEvent:Connect(onSync)
 
 	local playerGui = player:WaitForChild("PlayerGui")
-	local gui = playerGui:WaitForChild("IndexGui", GUI_WAIT_SECONDS)
-	local hud = playerGui:WaitForChild("HudGui", GUI_WAIT_SECONDS)
-	if not gui or not hud then
-		warn("[IndexController] PlayerGui/IndexGui or HudGui is missing (StarterGui in the place file)")
-		return
+	-- Slow joins can take longer than GUI_WAIT_SECONDS to fill PlayerGui: warn, then keep waiting.
+	-- Giving up left the INDEX button dead for the whole session (seen 2026-11-21).
+	local function waitForGui(name: string): Instance
+		local screen = playerGui:WaitForChild(name, GUI_WAIT_SECONDS)
+		if not screen then
+			warn(`[IndexController] still waiting for PlayerGui/{name} (StarterGui in the place file)`)
+			screen = playerGui:WaitForChild(name)
+		end
+		return screen :: Instance
 	end
+	local gui = waitForGui("IndexGui")
+	local hud = waitForGui("HudGui")
 	local foundPanel = gui:FindFirstChild("Panel")
 	local list = foundPanel and foundPanel:FindFirstChild("List")
 	local pageTemplate = list and list:FindFirstChild("PageTemplate")
