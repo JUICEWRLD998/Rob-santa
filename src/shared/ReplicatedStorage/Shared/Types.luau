@@ -15,7 +15,8 @@ export type RarityDef = {
 	sellPrice: number,
 	carrySlowdown: number, -- subtracted from walk speed while carried
 	grabHoldSeconds: number, -- ProximityPrompt hold time
-	color: Color3,
+	color: Color3, -- wrapping paper, and the rarity colour everywhere a toy appears
+	ribbonColor: Color3, -- ribbon and bow on the present (step 4.3)
 }
 
 -- One owned toy. `uid` tells apart two copies of the same toy.

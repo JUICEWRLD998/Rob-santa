@@ -253,6 +253,13 @@ local function spawnAt(point: SpawnPoint)
 		return
 	end
 	box.Color = Config.Rarities[rarity].color
+	-- Every other part of the template is ribbon or bow (RibbonX/Z, BowL/R).
+	local ribbonColor = Config.Rarities[rarity].ribbonColor
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") and part ~= box then
+			part.Color = ribbonColor
+		end
+	end
 	model:SetAttribute("Rarity", rarity)
 	model:SetAttribute("Zone", point.zone)
 	CollectionService:AddTag(model, PRESENT_TAG)

@@ -143,6 +143,8 @@ Selling (step 2.3): a mutation multiplies the sell price too, since it multiplie
 | Glowing | 2% | ×3 | Neon outline + soft light |
 | Golden | 0.5% | ×5 | Gold material + shine |
 
+How the looks work (step 4.3, placeholder toys until Phase 5): each mutation is a layer on top of the toy, so it carries over to the real toy meshes. Frosted = icy blue ice + drifting sparkles. Gingerbread = brown + a white icing band on top. Glowing = neon in the rarity colour + a light outline + a soft light. Golden = shiny gold foil + a warm glint + slow twinkles. The reveal card shows the mutation name in its own colour. Presents also get a ribbon colour per rarity, so the rarity reads from both the paper and the ribbon. Zones 2 and 3 use their own rarity tables (above) since step 2.1.
+
 ### Shelves
 - Start with 4 shelves. Buy more, up to 20. Cost: `500 × 1.8^(shelves bought)`.
 - Toys earn while you're offline, up to **2 hours** of income (4 hours with VIP). It's paid when you rejoin.

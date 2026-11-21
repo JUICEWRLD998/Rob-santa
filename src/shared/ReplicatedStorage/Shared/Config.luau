@@ -29,21 +29,23 @@ local Config = {
 	-- Section 6: rarity values. Sell price = 45 seconds of shelf income.
 	-- grabHoldSeconds: doc says "0.5s Common, up to 2s Mythic"; the steps between are (my pick).
 	-- Colours follow docs/04 wrappings (Mythic is a rainbow ribbon; this is its base colour).
+	-- ribbonColor (my pick, step 4.3): ribbon and bow on the present, picked to stand out on each paper.
 	Rarities = {
-		Common = { incomePerSecond = 1, sellPrice = 45, carrySlowdown = 0, grabHoldSeconds = 0.5, color = Color3.fromRGB(176, 133, 90) },
-		Uncommon = { incomePerSecond = 4, sellPrice = 180, carrySlowdown = 1, grabHoldSeconds = 0.8, color = Color3.fromRGB(70, 185, 90) },
-		Rare = { incomePerSecond = 15, sellPrice = 675, carrySlowdown = 2, grabHoldSeconds = 1.1, color = Color3.fromRGB(60, 130, 235) },
-		Epic = { incomePerSecond = 60, sellPrice = 2700, carrySlowdown = 3, grabHoldSeconds = 1.4, color = Color3.fromRGB(150, 80, 220) },
-		Legendary = { incomePerSecond = 250, sellPrice = 11250, carrySlowdown = 4, grabHoldSeconds = 1.7, color = Color3.fromRGB(245, 190, 40) },
-		Mythic = { incomePerSecond = 1000, sellPrice = 45000, carrySlowdown = 5, grabHoldSeconds = 2.0, color = Color3.fromRGB(255, 80, 160) },
+		Common = { incomePerSecond = 1, sellPrice = 45, carrySlowdown = 0, grabHoldSeconds = 0.5, color = Color3.fromRGB(176, 133, 90), ribbonColor = Color3.fromRGB(230, 215, 180) },
+		Uncommon = { incomePerSecond = 4, sellPrice = 180, carrySlowdown = 1, grabHoldSeconds = 0.8, color = Color3.fromRGB(70, 185, 90), ribbonColor = Color3.fromRGB(205, 35, 45) },
+		Rare = { incomePerSecond = 15, sellPrice = 675, carrySlowdown = 2, grabHoldSeconds = 1.1, color = Color3.fromRGB(60, 130, 235), ribbonColor = Color3.fromRGB(240, 244, 255) },
+		Epic = { incomePerSecond = 60, sellPrice = 2700, carrySlowdown = 3, grabHoldSeconds = 1.4, color = Color3.fromRGB(150, 80, 220), ribbonColor = Color3.fromRGB(250, 205, 70) },
+		Legendary = { incomePerSecond = 250, sellPrice = 11250, carrySlowdown = 4, grabHoldSeconds = 1.7, color = Color3.fromRGB(245, 190, 40), ribbonColor = Color3.fromRGB(190, 25, 40) },
+		Mythic = { incomePerSecond = 1000, sellPrice = 45000, carrySlowdown = 5, grabHoldSeconds = 2.0, color = Color3.fromRGB(255, 80, 160), ribbonColor = Color3.fromRGB(255, 255, 255) },
 	} :: { [Types.Rarity]: Types.RarityDef },
 
 	-- Section 6: mutations, rolled at unwrap, at most one. Chance is a fraction (0.1 = 10%).
+	-- color (my pick, step 4.3): the mutation stamp on the reveal card. Toy looks: Lib/ToyModel.
 	Mutations = {
-		{ name = "Golden" :: Types.Mutation, chance = 0.005, incomeMultiplier = 5 },
-		{ name = "Glowing" :: Types.Mutation, chance = 0.02, incomeMultiplier = 3 },
-		{ name = "Gingerbread" :: Types.Mutation, chance = 0.05, incomeMultiplier = 2 },
-		{ name = "Frosted" :: Types.Mutation, chance = 0.10, incomeMultiplier = 1.5 },
+		{ name = "Golden" :: Types.Mutation, chance = 0.005, incomeMultiplier = 5, color = Color3.fromRGB(255, 205, 70) },
+		{ name = "Glowing" :: Types.Mutation, chance = 0.02, incomeMultiplier = 3, color = Color3.fromRGB(120, 255, 200) },
+		{ name = "Gingerbread" :: Types.Mutation, chance = 0.05, incomeMultiplier = 2, color = Color3.fromRGB(215, 140, 75) },
+		{ name = "Frosted" :: Types.Mutation, chance = 0.10, incomeMultiplier = 1.5, color = Color3.fromRGB(150, 215, 255) },
 	},
 
 	-- Sections 2 + 6: zones. Weights are percent per present, in RarityOrder.
