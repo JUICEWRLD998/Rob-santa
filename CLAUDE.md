@@ -33,6 +33,8 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 - Parts, models, UI and sounds live in the **place file**, not on disk. After world/UI edits, `save_place`.
 - **`screen_capture` does not draw BillboardGuis with `AlwaysOnTop = true`** (2026-11-20, step 3.2). The elf's "HEY!" was enabled on the client and never appeared; a plain control sign failed the same way and passed with AlwaysOnTop off. Keep AlwaysOnTop off where a screenshot must prove the sign, or the check is blind.
 - **Before driving a playtest, check he isn't playing in it** (move a sample over a few seconds). Twice in 3.1/3.2 he was; my teleports and a Scriptable camera fought his controls. A custom-camera `screen_capture` also snaps back to his live camera while he moves.
+- **To click a UI button in a playtest, use `user_mouse_input` with screen `x`/`y` read off a `screen_capture`** (2026-11-21, step 4.4). With the device emulator on, the `instance_path` form clicked nothing once and hung past 120 s the second time. Scripted clicks don't work either: `VirtualInputManager` needs RobloxScript capability.
+- **Playtest `screen_capture` can come back with UI but no 3D world** (same session, emulator off at the time). Edit-mode captures rendered fine, and later playtest captures did too. Don't read a blank world as a broken build: check instances through `execute_luau`, or capture in Edit.
 - Freeze an NPC for a screenshot with `HumanoidRootPart.Anchored = true` (it walks out of frame between tool calls), and release it after.
 - **A ProximityPrompt only shows while its part is on camera** (2026-11-20, step 4.2). After teleporting the character with `root.CFrame = ...`, the follow camera can end up between the character and the target, facing back, and the prompt stays hidden: E did nothing, which looked like a broken shop prompt. Before pressing a prompt key, point the camera at the target (`workspace.CurrentCamera.CFrame = CFrame.lookAt(behindCharacter, target)`) and confirm with `ProximityPromptService.PromptShown`.
 
@@ -46,12 +48,15 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 ## Architecture
 ```
 src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.luau (remote names), Types.luau,
-             ToyMath.luau (income and sell price, shared so server and UI agree)
+             ToyMath.luau (income and sell price, shared so server and UI agree),
+             IndexBook.luau (4.4: Index pages, entry keys, find bonus, income multiplier; shared too)
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
                         ShopService, EventService, MonetizationService, AdventService, TutorialService,
-                        ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only)
+                        ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
+                        IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
+                        IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
              Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (4.1, vendored: loleris
              v1.0.3, commit 45c9847; no GitHub releases exist. selene.toml and check.sh skip it)
@@ -64,7 +69,9 @@ ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, tem
 Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by GuardService at boot
 (elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
 StarterGui (place file): RevealGui (2.2), HudGui (2.3; ShopButton on the left, 4.2), ShopGui (4.2: Panel with
-Title, Coins, Status, Close, List/ItemTemplate); controllers fill and animate them, they don't build them
+Title, Coins, Status, Close, List/ItemTemplate), IndexGui (4.4: same panel; Bonus label, List/PageTemplate and
+List/RowTemplate with Cells/CellTemplate; HudGui.IndexButton sits above ShopButton, clear of the phone
+thumbstick); controllers fill and animate them, they don't build them
 Shop (4.2): Shared/ShopCatalog.luau (items + prices, shared like ToyMath) -> ShopService (RequestPurchase,
 item id only) -> Player attributes Shop_<ItemId> = owned level. GuardService reads Shop_QuietSteps,
 DisguiseService reads Shop_ExtraWrap, ZoneController reads Shop_Zone2/3; ZoneService:OwnsZone reads the save.

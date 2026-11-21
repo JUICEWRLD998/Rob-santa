@@ -24,6 +24,7 @@ local EVENTS: { [string]: Direction } = {
 	DisguiseUpdate = "ServerToClient", -- disguise state for the button, camera and sounds
 	RequestPurchase = "ClientToServer", -- item id only, never a price; ShopService validates (4.2)
 	ShopResult = "ServerToClient", -- Types.ShopResult: bought or why not, for the shop screen
+	IndexSync = "ServerToClient", -- { string }: every Index key the player has found (4.4)
 }
 
 local Remotes = {}

@@ -154,6 +154,8 @@ How the looks work (step 4.3, placeholder toys until Phase 5): each mutation is 
 - A book listing every toy × every mutation. Discovering a new entry pays a one-time coin bonus.
 - Completing a zone's page gives a badge and a permanent +5% income.
 
+How it works (step 4.4, my picks, all in `Config.Index`): an entry is one toy in one form (plain, or one of the 4 mutations), so 16 toys × 5 = 80 entries. The first find of an entry pays 60 seconds of that form's shelf income (a plain Wool Sock pays 60, a Golden Robot Buddy 18,000). A zone's page holds the toys whose rarity first drops in that zone: Wrapping Room = Common, Uncommon and Rare (9 toys); Toy Factory = Epic (3); Candy Cane Mine = Legendary (2); Reindeer Stables = Mythic (2, marked "coming soon" until Update 1, but Mythics found through Lucky Wrap or the Sleigh Raid still count). A page is complete when every toy on it is found in any form; the mutations are extra finds with their own coin bonus. Each completed page adds +5% to all shelf income, offline earnings included (2 pages = +10%). Toys already owned before 4.4 count as found, with no coin bonus. The page badge comes later. Open the Index with the INDEX button above SHOP on the left of the screen.
+
 ---
 
 ## 7. Upgrades and gadgets

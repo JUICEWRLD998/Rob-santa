@@ -18,6 +18,7 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local IndexBook = require(ReplicatedStorage.Shared.IndexBook)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ToyMath = require(ReplicatedStorage.Shared.ToyMath)
 local Toys = require(ReplicatedStorage.Shared.Toys)
@@ -70,17 +71,19 @@ local function isNear(player: Player, part: BasePart, distance: number): boolean
 	return (root.Position - part.Position).Magnitude <= limit
 end
 
-local function incomeOf(state: State): number
+-- Shelf income x the Index bonus (+5% per completed page, step 4.4).
+local function incomeOf(player: Player, state: State): number
 	local total = 0
 	for _, entry in state.shelves do
 		total += ToyMath.incomePerSecond(entry.owned.toyId, entry.owned.mutation)
 	end
-	return total
+	local data = DataService:GetData(player)
+	return if data then total * IndexBook.incomeMultiplier(data.index) else total
 end
 
 local function refreshIncome(player: Player, state: State)
 	if player.Parent then
-		player:SetAttribute("IncomePerSecond", incomeOf(state))
+		player:SetAttribute("IncomePerSecond", incomeOf(player, state))
 	end
 end
 
@@ -358,7 +361,7 @@ end
 local function payOffline(player: Player, state: State)
 	local away = DataService:TakeOfflineSeconds(player)
 	local paidSeconds = math.min(away, Config.Offline.MaxHours * 3600)
-	local coins = math.floor(incomeOf(state) * paidSeconds)
+	local coins = math.floor(incomeOf(player, state) * paidSeconds)
 	if coins > 0 and EconomyService:AddCoins(player, coins) then
 		message(player, `Welcome back! Your shelves earned {coins} coins while you were away ({formatDuration(paidSeconds)})`)
 	end
@@ -406,7 +409,7 @@ end
 local function payIncome()
 	local tickSeconds = Config.Shelves.IncomeTickSeconds
 	for player, state in stateOf do
-		state.incomeCarry += incomeOf(state) * tickSeconds
+		state.incomeCarry += incomeOf(player, state) * tickSeconds
 		local whole = math.floor(state.incomeCarry)
 		if whole > 0 then
 			EconomyService:AddCoins(player, whole)
@@ -502,7 +505,15 @@ end
 -- Coins per second from the player's shelves right now.
 function ShelfService:GetIncomePerSecond(player: Player): number
 	local state = stateOf[player]
-	return if state then incomeOf(state) else 0
+	return if state then incomeOf(player, state) else 0
+end
+
+-- Re-shows income after something outside the shelves changed it (an Index page completed).
+function ShelfService:RefreshIncome(player: Player)
+	local state = stateOf[player]
+	if state then
+		refreshIncome(player, state)
+	end
 end
 
 return ShelfService

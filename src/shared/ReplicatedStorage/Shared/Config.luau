@@ -220,8 +220,20 @@ local Config = {
 
 	-- Section 6: Collection Index.
 	Index = {
-		ZoneCompleteIncomeBonus = 0.05,
+		ZoneCompleteIncomeBonus = 0.05, -- per completed page, added together (2 pages = +10%)
 		DiscoveryBonusSeconds = 60, -- (my pick) first find pays 60 s of that toy's shelf income
+		-- (my pick, step 4.4) A zone's page holds the toys of the rarities that first drop in
+		-- that zone (section 6 table). Mythic first drops in Zone 4 (Update 1); at launch it
+		-- comes only from Lucky Wrap and the Sleigh Raid.
+		Pages = {
+			{ zone = 1, rarities = { "Common", "Uncommon", "Rare" } :: { Types.Rarity } },
+			{ zone = 2, rarities = { "Epic" } :: { Types.Rarity } },
+			{ zone = 3, rarities = { "Legendary" } :: { Types.Rarity } },
+			{ zone = 4, rarities = { "Mythic" } :: { Types.Rarity } },
+		},
+		-- (my pick) false: a page is complete when every toy on it is found in ANY form.
+		-- true: every toy in every mutation (80 entries; Golden is 0.5%, so very slow).
+		PageNeedsAllMutations = false,
 	},
 
 	-- Section 10: Robux. Prices are display/reference only; IDs are added in Phase 6.
