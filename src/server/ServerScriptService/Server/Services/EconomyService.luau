@@ -94,4 +94,15 @@ function EconomyService:AddCoal(player: Player, amount: number): boolean
 	return true
 end
 
+-- Spends coal only if the player has enough (6.3: missed Advent doors). No yield between.
+function EconomyService:TrySpendCoal(player: Player, amount: number): boolean
+	local data = DataService:GetData(player)
+	if not data or not isValidAmount(amount) or data.coal < amount then
+		return false
+	end
+	data.coal -= amount
+	show(player)
+	return true
+end
+
 return EconomyService

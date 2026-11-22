@@ -256,6 +256,12 @@ Also: **private servers** at a small monthly price (set in Phase 8).
 | Updates | New zone Dec 18, Christmas Eve event Dec 24, New Year event Dec 31 |
 | Rebirth (Update 3, New Year) | "New Year's Resolution": reset coins, zones and upgrades for a permanent +25% income per rebirth. Toys and Index are kept |
 
+How the daily hooks work (step 6.3; all numbers in Config.Advent, Config.LoginStreak and Config.Quests; dates are UTC; picks marked "my pick" in Config):
+- **Advent Calendar:** door N opens free on December N. Odd days give coins and even days give a toy: Uncommon early, then Rare, Epic, and a Legendary on day 24. Day 25 gives a Mythic. A toy lands on the unwrap table with the full reveal. A door not opened on its day is "missed". A missed door opens for 10 coal, or with the Advent catch-up product (the player picks the door first). Missed doors can be caught up until January 6. A new December starts a fresh calendar. Open it from the DAILY button or from the board in the Town Square.
+- **Login streak:** it pays once per UTC day, on join or at midnight while playing. Day 1 to day 7 pay more each day, and day 8 onward keeps paying the day-7 amount. Missing a day starts again at day 1.
+- **Daily quests:** each player gets 3 per day from a pool of 5. The pool: steal 10 presents, survive 2 elf inspections, escape jail by mining, unwrap 5 presents, sell 3 toys. The same 3 stay all day, even after a rejoin. A quest pays the moment it is done.
+- **Coin rewards** grow with the player. Each pays a number of minutes of their current shelf income, with a minimum (like the coin packs).
+
 ---
 
 ## 12. Controls

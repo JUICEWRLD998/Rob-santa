@@ -70,8 +70,8 @@ local function setRockPrompts()
 	end
 end
 
--- Since 2026-11-21 the jail panel sits in the top bar, in the HUD's Wraps box spot (no wrapping in
--- jail), so nothing covers the middle of the screen while you mine.
+-- The jail panel sits in the top bar in the Wraps box spot (no wrapping in jail), as small as the
+-- Wraps box, with the Bail button beside it (2026-11-22), so nothing covers the screen while you mine.
 local function setWrapsShown(shown: boolean)
 	local playerGui = player:FindFirstChild("PlayerGui")
 	local hud = playerGui and playerGui:FindFirstChild("HudGui")
@@ -167,7 +167,7 @@ local function onUpdate(value: any)
 		endsAt = if type(value.endsAt) == "number" then value.endsAt else 0
 		local coal = if type(value.coal) == "number" then value.coal else 0
 		local needed = if type(value.coalNeeded) == "number" then value.coalNeeded else 0
-		coalLabel.Text = `Coal {coal} / {needed}`
+		coalLabel.Text = `Mine coal {coal}/{needed}`
 		local left = math.max(0, needed - coal)
 		local h = hint
 		if h then
@@ -232,9 +232,9 @@ local bailPrice = Config.DevProducts.BailOut.price
 local function refreshBailButton(button: TextButton)
 	local credits = player:GetAttribute("BailCredits")
 	if type(credits) == "number" and credits > 0 then
-		button.Text = `Use free Bail Out ({credits})`
+		button.Text = `Free Bail ({credits})`
 	else
-		button.Text = `Bail Out  {ROBUX} {bailPrice}`
+		button.Text = `Bail {ROBUX} {bailPrice}`
 	end
 end
 

@@ -58,7 +58,7 @@ src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.l
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
-                        ShopService, EventService, MonetizationService, AdventService, TutorialService,
+                        ShopService, EventService, MonetizationService, DailyService (6.3: Advent, streak, quests), TutorialService,
                         NpcService (5.3: idle loop on IdleNpc-tagged models), ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
                         IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
                         IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
@@ -71,7 +71,7 @@ src/client/  Main.local.luau (requires each module in Controllers/)
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController, SoundController (5.6),
-                           StoreController and BlizzardController (6.2)
+                           StoreController and BlizzardController (6.2), DailyController (6.3)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
 lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
 Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
@@ -85,7 +85,7 @@ Title, Coins, Status, Close, List/ItemTemplate), IndexGui (4.4: same panel; Bonu
 List/RowTemplate with Cells/CellTemplate; HudGui.IndexButton sits above ShopButton, clear of the phone
 thumbstick); controllers fill and animate them, they don't build them.
 5.5 skin: RevealGui is a full-screen stage (IgnoreGuiInset; Burst, Rays, Toy ViewportFrame, Card with
-Mutation/StampScale, Confetti/PieceTemplate, Flash). The INDEX and SHOP buttons are 72 px and anchored top-left.
+Mutation/StampScale, Confetti/PieceTemplate, Flash). HUD layout (2026-11-22, the owner found the top bar crowded): every top button is 56 px. INDEX and SHOP are in the top-left column, DAILY and ROBUX in the top-right column. In the centre, Coins (176x44) and Wraps (96x44) form one pair; while jailed, JailGui.Panel (128x44: "Free in Ns" and "Mine coal c/n") takes the Wraps spot, with BailOutButton (88x44) beside it, and DAILY plus the Wrap! touch button hide. DontMove sits at y 0.55 so it clears the Wrap! button on small phones. Toast at y 58, Blizzard banner at y 94. Toy name tags on the unwrap table alternate height (ShelfService) so neighbours do not run together.
 Shop and Index panels are `UDim2.new(1,-230,0.82,0)` wide (max 620), leaving 115 px clear on each side for
 the thumbstick and jump button. Every ScreenGui uses ZIndexBehavior Global, and each DropShadow sits at its
 parent's ZIndex - 1. Numbers use Luckiest Guy; everything else uses Fredoka One.
@@ -109,12 +109,29 @@ cards, coin pack amounts and the Lucky Wrap odds text. Pass effects reach other 
 `Pass_<Key>` (ShelfService: Vip; PresentService: BigSack; DisguiseService: WrapMaster; SpeedBoots is a
 MovementService modifier), plus PassesChecked, LuckyWraps, BailCredits and PaidRandomItemsRestricted.
 Blizzard: Workspace attributes BlizzardEndsAt (server time) and BlizzardBy, plus GuardService:SetBlizzard.
-Client: StoreController (StoreGui, HudGui.StoreButton left of Coins), BlizzardController (HudGui.Blizzard
+Client: StoreController (StoreGui, HudGui.StoreButton top-right, under DAILY), BlizzardController (HudGui.Blizzard
 banner), and SnowController (heavier snow). Studio test hook: `ServerStorage.DebugMonetization:Invoke("receipt",
 player, productKey, purchaseId?)` runs a fake receipt; `("pass", player, passKey)` grants a pass. In a Studio
 playtest the real purchase prompt is free and goes through ProcessReceipt too.
 Live prices come from GetProductInfoAsync, and Config prices are only a fallback. On 2026-11-22 the live prices
 differed from the Config prices (Blizzard 59, Lucky Wrap 25, coins 15/59/169), so trust the store screen.
+Daily (6.3): DailyService runs the Advent Calendar, the login streak and the daily quests (UTC dates). It sends
+DailySync (Types.DailySync) and handles RequestAdventDoor(day, "Free"|"Coal"|"Robux"). For Robux, the server
+remembers the door and opens the purchase prompt itself, and MonetizationService's receipt calls
+DailyService:GrantAdventCatchUp. Quest progress comes from Server/Lib/GameEvents.luau: services call
+`GameEvents.fire(name, player, amount?)` (PresentGrabbed, InspectionSurvived, MinedOut, PresentUnwrapped,
+ToySold) instead of requiring DailyService. The "Advent Calendar" prompt on the AdventCalendar-tagged Town board
+is made by DailyService, and DailyController opens the screen when it fires. Place file: DailyGui (Panel/List with
+HeaderTemplate, QuestTemplate, StreakRow/DayTemplate, DoorGrid/DoorTemplate, ActionRow) and HudGui.DailyButton
+(top-right corner, with a Badge; hidden while jailed). Studio test hook:
+`ServerStorage.DebugDaily:Invoke("date", "2026-12-10")` pretends it is that UTC date ("" = real), and
+`("event", "ToySold", player, n)` fires a GameEvents event. **Reset a test player's adventDoors, adventYear,
+lastStreakDay and quests afterwards**: doors opened on a pretend December date stay opened in the real one.
+DailyService rate-limits RequestAdventDoor (0.4 s), so a test that fires several requests in a row must wait
+longer between them, or some are dropped without an error.
+**`user_mouse_input` clicks missed the HUD with the phone emulator on** (2026-11-22, step 6.3): both the
+AbsolutePosition and the screenshot coordinates clicked nothing. For a screenshot of a panel, set it Visible
+from a Client `execute_luau`; the controller fills it on every sync even while it is closed.
 Zone edges: each zone has a ZoneVolume part tagged ZoneArea; elves never chase past it.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
 Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and

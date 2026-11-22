@@ -18,6 +18,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Types = require(ReplicatedStorage.Shared.Types)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
 
 local WRAPS_ATTRIBUTE = "Wraps" -- on the Player; the HUD reads it
 local EXTRA_WRAP_ATTRIBUTE = "Shop_ExtraWrap" -- ShopCatalog.attributeName("ExtraWrap")
@@ -354,6 +355,9 @@ function DisguiseService:EndInspect(player: Player, fooled: boolean)
 	end
 	if player.Parent then
 		send(player, if fooled then "Fooled" else "Gotcha", disguise)
+		if fooled then
+			GameEvents.fire("InspectionSurvived", player)
+		end
 	end
 end
 

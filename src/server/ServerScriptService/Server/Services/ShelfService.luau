@@ -27,11 +27,14 @@ local ToyModel = require(script.Parent.Parent.Lib.ToyModel)
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local PlotService = require(script.Parent.PlotService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
 
 local OWNER_TAG = "OwnerOnly" -- the client hides prompts inside these unless it is the owner
 local OWNER_ATTRIBUTE = "OwnerUserId"
 local INDEX_ATTRIBUTE = "Hideout"
 local TOY_GAP = 0.4 -- studs between toys waiting on the table
+local TAG_HEIGHT = 1.5 -- the Toy template's Tag StudsOffset.Y
+local TAG_STAGGER = 1 -- studs higher for every second toy's tag on the table
 local VIP_ATTRIBUTE = "Pass_Vip" -- StoreCatalog.passAttribute("Vip"), set by MonetizationService
 local PASSES_CHECKED_ATTRIBUTE = "PassesChecked" -- MonetizationService: pass ownership is known
 
@@ -202,6 +205,7 @@ local function sellShelved(player: Player, slot: number, entry: Entry)
 	end
 	refreshIncome(player, state)
 	message(player, `Sold {displayName(entry)} for {price} coins`)
+	GameEvents.fire("ToySold", player, 1)
 end
 
 local function slotPart(state: State, slot: number): BasePart?
@@ -291,6 +295,12 @@ function layoutTable(player: Player, state: State)
 			local x = (position - (shown + 1) / 2) * spacing
 			model:PivotTo(tablePart.CFrame * CFrame.new(x, tablePart.Size.Y / 2 + body.Size.Y / 2, 0))
 			model.Parent = tablePart
+			-- Neighbouring name tags are as wide as the gap between toys and ran together ("RC SledToy
+			-- Drum"), so every second tag sits higher.
+			local tag = body:FindFirstChild("Tag")
+			if tag and tag:IsA("BillboardGui") then
+				tag.StudsOffset = Vector3.new(0, TAG_HEIGHT + (if position % 2 == 0 then TAG_STAGGER else 0), 0)
+			end
 		end
 	end
 end
@@ -316,6 +326,7 @@ local function sellAllWaiting(player: Player, market: BasePart)
 		EconomyService:AddCoins(player, total)
 	end
 	message(player, `The Black Market paid {total} coins for {count} toy{if count == 1 then "" else "s"}`)
+	GameEvents.fire("ToySold", player, count)
 end
 
 -- Active slots look solid; slots you haven't bought yet look see-through. nil = free hideout.

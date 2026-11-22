@@ -26,6 +26,8 @@ local EVENTS: { [string]: Direction } = {
 	ShopResult = "ServerToClient", -- Types.ShopResult: bought or why not, for the shop screen
 	IndexSync = "ServerToClient", -- { string }: every Index key the player has found (4.4)
 	RequestBailOut = "ClientToServer", -- no arguments: use a saved free Bail Out; MonetizationService validates (6.2)
+	RequestAdventDoor = "ClientToServer", -- (day, "Free" | "Coal" | "Robux"); DailyService validates (6.3)
+	DailySync = "ServerToClient", -- Types.DailySync: calendar, streak and quests for the Daily screen (6.3)
 }
 
 local Remotes = {}
