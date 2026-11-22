@@ -15,7 +15,7 @@ export type Direction = "ServerToClient" | "ClientToServer"
 -- Add a remote here first, then use it. Typos fail loudly in Remotes.get.
 -- RULE (step 2.4 security review): add a ClientToServer remote in the SAME change as its
 -- validated server handler. A remote with no handler is still callable by exploiters, and the
--- server queues their events. Planned: RequestSnowball (6.4: throw intent, server picks the target).
+-- server queues their events.
 local EVENTS: { [string]: Direction } = {
 	UnwrapReveal = "ServerToClient", -- unwrap result: toy, rarity, mutation
 	Notify = "ServerToClient", -- banners and short messages
@@ -28,6 +28,8 @@ local EVENTS: { [string]: Direction } = {
 	RequestBailOut = "ClientToServer", -- no arguments: use a saved free Bail Out; MonetizationService validates (6.2)
 	RequestAdventDoor = "ClientToServer", -- (day, "Free" | "Coal" | "Robux"); DailyService validates (6.3)
 	DailySync = "ServerToClient", -- Types.DailySync: calendar, streak and quests for the Daily screen (6.3)
+	RequestSnowball = "ClientToServer", -- (aim: Vector3): camera direction; SnowballService picks the target (6.4)
+	SnowballFx = "ServerToClient", -- (from: Vector3, to: Vector3, seconds: number, hit: string): the throw, for everyone to draw (6.4)
 }
 
 local Remotes = {}

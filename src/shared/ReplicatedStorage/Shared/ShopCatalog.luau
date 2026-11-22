@@ -59,8 +59,8 @@ local ITEMS: { Item } = {
 		name = "Snowball",
 		maxLevel = 1,
 		describe = function(_level: number): string
-			-- Throwing arrives in step 6.4; say so, so nobody buys it expecting it to work now.
-			return `Throw at an elf to stun it for {upgrades.Snowball.elfStunSeconds} s. Throwing unlocks in a later update`
+			-- Thrown with F, ButtonB or the Snowball button (step 6.4, SnowballService).
+			return `Stun an elf for {upgrades.Snowball.elfStunSeconds} s, or knock a thief's present loose`
 		end,
 	},
 	{

@@ -6,7 +6,7 @@
 -- new level and applies it. It answers with ShopResult (ok + a short message for the shop screen).
 -- Owned levels are mirrored onto the Player as attributes (ShopCatalog.attributeName) for the UI
 -- and for GuardService (Quiet Steps) and DisguiseService (Extra Wrap), which read them.
--- The Snowball is bought and saved here; throwing it comes in step 6.4 (RequestSnowball).
+-- The Snowball is bought and saved here; SnowballService throws it (step 6.4, RequestSnowball).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -90,7 +90,7 @@ local function apply(player: Player, data: PlayerData, id: ItemId, previous: num
 		ShelfService:RefreshShelfCount(player)
 	end
 	-- Quiet Steps and the zones work through the attribute (GuardService, ZoneController) and
-	-- the save (ZoneService); the Snowball does nothing until 6.4.
+	-- the save (ZoneService); SnowballService reads the save for the Snowball (6.4).
 end
 
 local function onLoaded(player: Player, data: PlayerData)

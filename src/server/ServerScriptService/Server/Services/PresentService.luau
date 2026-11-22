@@ -7,7 +7,9 @@
 -- * A grabbed present frees its spawn point, which spawns a new present in 20-40 s.
 -- * A dropped present (death, reset, leaving) lies where it fell for 10 s, then goes to a free
 --   spawn point in its zone. If the zone is full, it disappears.
--- * Every grab is checked on the server: present still resting, player alive and close, hands free.
+-- * Every grab is checked on the server: present resting or dropped, player alive and close, hands free.
+-- * Step 6.4: a dropped present can be picked up by anyone nearby until it goes home (a snowball
+--   knocks presents loose); the Sleigh Raid's presents are zone 0 (the Town) and vanish when dropped.
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -65,26 +67,32 @@ local template: Model? = nil
 local folder: Folder
 local pointsByZone: { [number]: { SpawnPoint } } = {}
 local carriedBy: { [Player]: { Present } } = {}
+-- Sleigh Raid presents (zone 0, no spawn point). Cleared when the sleigh leaves, unless carried.
+local eventPresents: { [Present]: true } = {}
 local playerConnections: { [Player]: { RBXScriptConnection } } = {}
 
 -- Forward declarations (these functions call each other).
 local placeAt: (present: Present, point: SpawnPoint) -> ()
 local scheduleRespawn: (point: SpawnPoint) -> ()
 
-local function rollRarity(zone: number): Types.Rarity
-	local weights = Config.Zones[zone].rarityWeights
+-- Weights are percent per present, in Config.RarityOrder (a zone's table, or the Sleigh Raid's).
+local function rollRarity(weights: { number }): Types.Rarity
 	local total = 0
 	for _, weight in weights do
 		total += weight
 	end
 	local roll = rng:NextNumber(0, total)
+	local lowest: number? = nil -- the lowest tier that can drop (a roll of exactly `total` lands here)
 	for tier, weight in weights do
 		roll -= weight
-		if roll < 0 and weight > 0 then
-			return Config.RarityOrder[tier]
+		if weight > 0 then
+			lowest = lowest or tier
+			if roll < 0 then
+				return Config.RarityOrder[tier]
+			end
 		end
 	end
-	return Config.RarityOrder[1]
+	return Config.RarityOrder[lowest or 1]
 end
 
 -- Big Sack (game pass, 6.2): MonetizationService sets the attribute.
@@ -147,7 +155,8 @@ local function attachToBack(present: Present, character: Model, slot: number): b
 end
 
 local function tryGrab(player: Player, present: Present)
-	if present.state ~= "Resting" then
+	-- 6.4: a present knocked loose (snowball) or dropped (reset) can be picked up by anyone nearby.
+	if present.state ~= "Resting" and present.state ~= "Dropped" then
 		return
 	end
 	local character = player.Character
@@ -174,6 +183,10 @@ local function tryGrab(player: Player, present: Present)
 	end
 	present.grabbedFrom = grabbedFrom
 	present.grabbedAt = os.clock()
+	if present.returnTimer then
+		task.cancel(present.returnTimer)
+		present.returnTimer = nil
+	end
 
 	removePrompt(present)
 	local point = present.point
@@ -184,6 +197,7 @@ local function tryGrab(player: Player, present: Present)
 	end
 	present.state = "Carried"
 	present.carrier = player
+	eventPresents[present] = nil -- a grabbed raid present is the thief's, even after the sleigh leaves
 	table.insert(list, present)
 	refreshCarrier(player)
 	GameEvents.fire("PresentGrabbed", player)
@@ -210,6 +224,7 @@ local function destroyPresent(present: Present)
 		present.returnTimer = nil
 	end
 	removePrompt(present)
+	eventPresents[present] = nil
 	present.model:Destroy()
 end
 
@@ -247,16 +262,16 @@ function placeAt(present: Present, point: SpawnPoint)
 	addPrompt(present)
 end
 
-local function spawnAt(point: SpawnPoint)
-	if point.present or not template then
-		return
+-- A new present of `rarity`, wrapped to match, in the Presents folder. Not placed yet.
+local function buildPresent(rarity: Types.Rarity, zone: number): Present?
+	if not template then
+		return nil
 	end
-	local rarity: Types.Rarity = rollRarity(point.zone)
 	local model = template:Clone()
 	local box = model.PrimaryPart
 	if not box then
 		model:Destroy()
-		return
+		return nil
 	end
 	-- Wrapping per rarity (step 5.4): paper colour and material, ribbon colour and material.
 	local wrapping = Config.Wrapping[rarity]
@@ -289,12 +304,12 @@ local function spawnAt(point: SpawnPoint)
 		emitter.Parent = box
 	end
 	model:SetAttribute("Rarity", rarity)
-	model:SetAttribute("Zone", point.zone)
+	model:SetAttribute("Zone", zone)
 	CollectionService:AddTag(model, PRESENT_TAG)
 	local present: Present = {
 		model = model,
 		box = box,
-		zone = point.zone,
+		zone = zone,
 		rarity = rarity,
 		state = "Resting",
 		point = nil,
@@ -306,7 +321,17 @@ local function spawnAt(point: SpawnPoint)
 		grabbedAt = nil,
 	}
 	model.Parent = folder
-	placeAt(present, point)
+	return present
+end
+
+local function spawnAt(point: SpawnPoint)
+	if point.present then
+		return
+	end
+	local present = buildPresent(rollRarity(Config.Zones[point.zone].rarityWeights), point.zone)
+	if present then
+		placeAt(present, point)
+	end
 end
 
 function scheduleRespawn(point: SpawnPoint)
@@ -367,6 +392,7 @@ local function drop(present: Present, player: Player, character: Model?)
 	present.state = "Dropped"
 	present.carrier = nil
 	present.returnTimer = task.delay(Config.Presents.DroppedReturnSeconds, returnToZone, present)
+	addPrompt(present) -- 6.4: anyone nearby may pick it up before it goes home
 end
 
 local function dropAll(player: Player, character: Model?)
@@ -558,6 +584,44 @@ function PresentService:ReturnCarried(player: Player)
 		returnToZone(present)
 	end
 	refreshCarrier(player)
+end
+
+-- Sleigh Raid (6.4): `count` presents of Rare or better (Config.SleighRaid.RarityWeights) in a ring
+-- around `center` (the pad's top). Zone 0 = the Town: everyone may take them, and a dropped one
+-- disappears instead of going home (there is no spawn point for it).
+function PresentService:SpawnRaidPresents(center: CFrame, count: number, ringStuds: number)
+	for i = 1, count do
+		local present = buildPresent(rollRarity(Config.SleighRaid.RarityWeights), 0)
+		if present then
+			local angle = (i - 1) / count * math.pi * 2
+			local spot = center * CFrame.new(math.cos(angle) * ringStuds, 0, math.sin(angle) * ringStuds)
+			present.box.Anchored = true
+			present.box.CFrame = spot * CFrame.new(0, present.box.Size.Y / 2, 0)
+			present.state = "Resting"
+			eventPresents[present] = true
+			addPrompt(present)
+		end
+	end
+end
+
+-- The sleigh leaves (6.4): raid presents nobody is carrying disappear with it.
+function PresentService:ClearRaidPresents()
+	for present in table.clone(eventPresents) do
+		if present.state ~= "Carried" then
+			destroyPresent(present)
+		end
+	end
+end
+
+-- A snowball hit (6.4): everything the player carries falls to the ground at their feet, where
+-- anyone can pick it up. Returns how many presents fell.
+function PresentService:KnockLoose(player: Player): number
+	local list = carriedBy[player]
+	local count = if list then #list else 0
+	if count > 0 then
+		dropAll(player, player.Character)
+	end
+	return count
 end
 
 -- Re-shows the carry capacity after it changed (Big Sack bought, 6.2).

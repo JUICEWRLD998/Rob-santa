@@ -168,7 +168,7 @@ How it works (step 4.4, my picks, all in `Config.Index`): an entry is one toy in
 | Snowball | Throw at an elf: stunned for 3s (8s cooldown). Throw at a player carrying a present: they drop it | 5,000 |
 | Big Sack | Carry 2 presents | Game pass (section 10) |
 
-How the shop works (step 4.2): the Gadget Shop counter and a SHOP button on the left of the HUD open the same screen. It also sells extra shelves and the Zone 2 / Zone 3 unlocks (Zone 3 needs Zone 2 first). A bought zone's barrier opens only for its owner. Quiet Steps shortens how far elves and snowman cameras can *notice* you (patrol and camera vision); an elf already chasing you still sees you at full range. The Snowball can be bought now; throwing it arrives with step 6.4.
+How the shop works (step 4.2): the Gadget Shop counter and a SHOP button on the left of the HUD open the same screen. It also sells extra shelves and the Zone 2 / Zone 3 unlocks (Zone 3 needs Zone 2 first). A bought zone's barrier opens only for its owner. Quiet Steps shortens how far elves and snowman cameras can *notice* you (patrol and camera vision); an elf already chasing you still sees you at full range. Throwing the Snowball arrived with step 6.4 (section 9).
 
 ---
 
@@ -193,6 +193,11 @@ How the shop works (step 4.2): the Gadget Shop counter and a SHOP button on the 
 - A wanted poster in the Town Square shows the **richest thief in the server**, with their avatar and coin total.
 - The Most Wanted player gets a red outline. Any player who hits them with a Snowball while they carry a present makes them drop it and earns a 10% coin bounty from the game. Nothing is taken from the target's coins.
 - It's light PvP that works with 2 players and gives top players a status symbol.
+
+How it works (step 6.4, my picks in `Config.SleighRaid`, `Config.MostWanted` and `Config.Upgrades.Snowball`):
+- **Sleigh Raid.** The first raid lands 12 minutes after the server starts, then every 12 minutes. Nothing about the raid is on screen between raids. Ten seconds before landing a chime plays, a small orange "SLEIGH 7s" tile appears in the top-left button column under SHOP, and the sleigh flies down onto the Town pad. During the raid the tile turns red and counts down the 60 seconds ("RAID 0:42"), then disappears. Nothing about the raid goes in the middle of the screen. Six presents stand in a ring round the sleigh, rolled 55% Rare, 30% Epic, 12% Legendary, 3% Mythic. Anyone may take them; a dropped raid present disappears. Three raid elves walk an oval round the pad and guard the whole Town Square: they spot, chase and jail like a Zone 2 elf, and the disguise, Blizzard and snowballs work on them. When the raid ends, the sleigh lifts off with its elves and any raid presents nobody is carrying.
+- **Most Wanted.** The richest player in the server (saved coins) is on the poster, re-checked every 3 seconds. Their red outline shows only when at least 2 players are in the server, only where they are in plain view, and never while they are a gift box or in jail.
+- **Snowball.** F on PC, ButtonB on console, a Snow button left of the Wrap! button on phone (only once bought). You aim with the camera; the server hits the nearest elf, or player carrying a present, within 45 studs and inside a 50-degree cone, with a clear line. An elf stops, can't see you and drops any chase for 3 seconds ("*brrr!*"). A player's presents fall at their feet, and anyone nearby can pick them up before they go home (this also applies to presents dropped by a reset). Hitting the Most Wanted player while they carry a present pays the thrower 10% of the target's coins, from the game. The same hunter can earn a bounty on the same target at most once every 5 minutes, so two friends can't farm it. Wrapped players can't throw or be hit.
 
 ### Hideout raids (Update 1, not at launch)
 - Other players can walk into your hideout and steal a toy off your shelf, then run it to theirs (the steal-formula social layer).
