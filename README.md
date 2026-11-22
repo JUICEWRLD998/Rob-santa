@@ -50,8 +50,8 @@ Tick these as you go. Claude reads this list to know where you are.
 - [x] Phase 2: Core loop (grab, carry, run home, unwrap, display, sell)
 - [x] Phase 3: Elves, jail and the gift-box disguise
 - [x] Phase 4: Saving, upgrades, zones 2 and 3, rarities, index
-- [ ] Phase 5: The look (art, characters, animations, UI, sound)
-- [ ] Phase 6: Money and reasons to return (passes, advent calendar, Sleigh Raid, tutorial)
+- [x] Phase 5: The look (art, characters, animations, UI, sound)
+- [x] Phase 6: Money and reasons to return (passes, advent calendar, Sleigh Raid, tutorial)
 - [ ] Phase 7: Test and harden (multiplayer, phone, exploits, friends)
 - [ ] Phase 8: Launch
 - [ ] Phase 9: Live updates through New Year
