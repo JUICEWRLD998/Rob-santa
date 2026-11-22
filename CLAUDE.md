@@ -59,7 +59,8 @@ src/server/  Main.server.luau (requires each module in Services/ and calls :Init
                         IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
                         IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
-             Lib/ToyModel.luau (placeholder toy builder), Lib/ProfileStore.luau (4.1, vendored: loleris
+             Lib/ToyModel.luau (toy builder: mesh from ServerStorage/ToyMeshes/<id> since 5.4, mutation
+             looks, tag), Lib/ProfileStore.luau (4.1, vendored: loleris
              v1.0.3, commit 45c9847; no GitHub releases exist. selene.toml and check.sh skip it)
 src/client/  Main.local.luau (requires each module in Controllers/)
              Controllers/  HudController, PresentController, RevealController, OwnerPromptController,
@@ -92,6 +93,7 @@ Studio stores LF, so compare `tr -d '\r' < file | wc -c`.
 Workspace/Map (place file): world, with CollectionService tags + attributes for gameplay spots
 Workspace/Map/Lights (5.1): cabin glows, Town lanterns, per-zone lights (invisible, CanQuery off so elf
 raycasts ignore them). Lighting settings are in docs/04 section 5. SnowController (client) draws snow.
+PresentFxController (5.4, client) animates the rainbow ribbon on presents whose Config.Wrapping has rainbowRibbon.
 `Lighting.Technology` can't be read or set through `execute_luau` (lacks RobloxScript capability): the
 owner sets it by hand.
 Art (5.2) is decoration on top of the greybox: each Hideout, the Town and each zone area has a `Decor`

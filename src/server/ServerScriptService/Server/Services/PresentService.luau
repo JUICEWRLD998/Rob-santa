@@ -252,13 +252,35 @@ local function spawnAt(point: SpawnPoint)
 		model:Destroy()
 		return
 	end
+	-- Wrapping per rarity (step 5.4): paper colour and material, ribbon colour and material.
+	local wrapping = Config.Wrapping[rarity]
 	box.Color = Config.Rarities[rarity].color
+	box.Material = wrapping.paper
+	box.Reflectance = wrapping.reflectance
 	-- Every other part of the template is ribbon or bow (RibbonX/Z, BowL/R).
 	local ribbonColor = Config.Rarities[rarity].ribbonColor
 	for _, part in model:GetDescendants() do
 		if part:IsA("BasePart") and part ~= box then
 			part.Color = ribbonColor
+			part.Material = wrapping.ribbon
 		end
+	end
+	if wrapping.sparkles > 0 then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = "WrapSparkles"
+		emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds" -- ships with the client
+		emitter.Color = ColorSequence.new(ribbonColor:Lerp(Color3.new(1, 1, 1), 0.5))
+		emitter.LightEmission = 1
+		emitter.Rate = wrapping.sparkles
+		emitter.Lifetime = NumberRange.new(0.8, 1.4)
+		emitter.Speed = NumberRange.new(0.4, 1)
+		emitter.SpreadAngle = Vector2.new(180, 180)
+		emitter.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.3, 0.4),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		emitter.Parent = box
 	end
 	model:SetAttribute("Rarity", rarity)
 	model:SetAttribute("Zone", point.zone)
