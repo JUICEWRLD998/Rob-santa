@@ -188,6 +188,17 @@ local function attachMesh(model: Model, body: BasePart, mesh: Model): { BasePart
 	return parts
 end
 
+-- Copies the meshes to ReplicatedStorage/ToyMeshes at boot (step 5.5), so the client's unwrap
+-- reveal can spin the toy. Done at runtime because ReplicatedStorage is a Script Sync folder,
+-- where the place file must not keep non-script instances. Meshes are looks only: nothing to steal.
+function ToyModel.publishMeshes()
+	local source = ServerStorage:FindFirstChild(MESH_FOLDER)
+	if not source or ReplicatedStorage:FindFirstChild(MESH_FOLDER) then
+		return
+	end
+	source:Clone().Parent = ReplicatedStorage
+end
+
 -- True if the template exists. Services call this in Init to warn early.
 function ToyModel.isReady(): boolean
 	return template() ~= nil

@@ -423,6 +423,7 @@ function ShelfService:Init()
 	if not ToyModel.isReady() then
 		warn("[ShelfService] ServerStorage/Templates/Toy is missing; toys will be invisible")
 	end
+	ToyModel.publishMeshes() -- the unwrap reveal (client) shows the toy's mesh
 	for _, part in CollectionService:GetTagged("ShelfSlot") do
 		local index = part:GetAttribute(INDEX_ATTRIBUTE)
 		local slot = part:GetAttribute("Index")

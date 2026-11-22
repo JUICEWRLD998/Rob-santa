@@ -99,7 +99,7 @@ end
 
 local function refreshAll()
 	if coinsLabel then
-		coinsLabel.Text = `{withCommas(numberAttribute("Coins"))} coins`
+		coinsLabel.Text = withCommas(numberAttribute("Coins")) -- next to the coin icon (5.5)
 	end
 	for _, card in cards do
 		refreshCard(card)

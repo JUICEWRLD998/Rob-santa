@@ -20,6 +20,7 @@ local PUSH_IN_FOV = 58 -- camera field of view while an elf sniffs you (default 
 local CAMERA_TWEEN = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
 local PULSE = TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 local TOUCH_BUTTON_SIZE = 90 -- pixels: "a big gift-box button on phone"
+local TOUCH_BUTTON_GAP = 14 -- pixels between the Wrap! button and the jump button
 
 local DisguiseController = {}
 
@@ -63,7 +64,7 @@ local function refreshHud()
 		status = howToWrap()
 	end
 	if wrapsCount then
-		wrapsCount.Text = `Wraps {wraps()}`
+		wrapsCount.Text = tostring(wraps()) -- the gift icon next to it says what it counts (5.5)
 	end
 	if wrapsStatus then
 		wrapsStatus.Text = status
@@ -132,6 +133,37 @@ local function onUpdate(value: any)
 	refreshHud()
 end
 
+-- Puts the Wrap! button just left of the jump button. The jump button's size and place differ by
+-- device (70 px on phones, 120 px on tablets), so a fixed spot overlapped it on an iPad (5.5).
+local function placeTouchButton(touchGui: Instance)
+	local button = ContextActionService:GetButton(ACTION)
+	local jump = touchGui:FindFirstChild("JumpButton", true)
+	if not jump then
+		-- The touch controls fill TouchGui after it appears: try again once the jump button exists.
+		local waiting: RBXScriptConnection? = nil
+		waiting = touchGui.DescendantAdded:Connect(function(added)
+			if added.Name == "JumpButton" and waiting then
+				waiting:Disconnect()
+				task.defer(placeTouchButton, touchGui)
+			end
+		end)
+		return
+	end
+	local frame = button and button.Parent
+	if not button or not jump or not jump:IsA("GuiObject") or not frame or not frame:IsA("GuiObject") then
+		return
+	end
+	local function place()
+		local x = jump.AbsolutePosition.X - frame.AbsolutePosition.X - TOUCH_BUTTON_SIZE - TOUCH_BUTTON_GAP
+		local y = jump.AbsolutePosition.Y - frame.AbsolutePosition.Y + (jump.AbsoluteSize.Y - TOUCH_BUTTON_SIZE) / 2
+		ContextActionService:SetPosition(ACTION, UDim2.fromOffset(x, y))
+	end
+	jump:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+	jump:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+	frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+	place()
+end
+
 local function onAction(_name: string, inputState: Enum.UserInputState, _input: InputObject): Enum.ContextActionResult
 	if inputState == Enum.UserInputState.Begin then
 		Remotes.get("RequestDisguise"):FireServer()
@@ -167,6 +199,16 @@ function DisguiseController:Start()
 	if button then
 		button.Size = UDim2.fromOffset(TOUCH_BUTTON_SIZE, TOUCH_BUTTON_SIZE)
 		ContextActionService:SetPosition(ACTION, UDim2.new(1, -(TOUCH_BUTTON_SIZE + 110), 1, -(TOUCH_BUTTON_SIZE + 20)))
+		-- TouchGui (thumbstick and jump) only exists on touch devices and can arrive after this runs.
+		local touchGui = playerGui:FindFirstChild("TouchGui")
+		if touchGui then
+			placeTouchButton(touchGui)
+		end
+		playerGui.ChildAdded:Connect(function(added)
+			if added.Name == "TouchGui" then
+				task.defer(placeTouchButton, added)
+			end
+		end)
 	end
 
 	Remotes.get("DisguiseUpdate").OnClientEvent:Connect(onUpdate)

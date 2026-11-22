@@ -155,6 +155,17 @@ What was built in step 5.2 (place file, all from plain parts, zero scripts): eac
 - Rarity colours used everywhere a toy appears (same colours as the wrappings).
 - Font: a bold rounded font (Studio includes several, e.g. Fredoka One / Luckiest Guy style). Keep one font for headings and one for numbers.
 
+What was built in step 5.5 (place file + RevealController):
+- **Fonts:** Fredoka One for headings and words, Luckiest Guy for every number (coins, wraps, timers, prices, the Index bonus). Close buttons stay in Fredoka One, because Luckiest Guy's "X" reads as a blob.
+- **Buttons and panels:** 4 px outlines, rounded corners, and a soft drop shadow under each pill, button and panel. The shadow is a `DropShadow` frame one ZIndex below its parent. Every ScreenGui uses ZIndexBehavior Global.
+- **Icons instead of words:** a gold coin built from frames (the 🪙 emoji does not render in Roblox), 🎁 next to the wraps count, and 🛒 / 📖 on the SHOP and INDEX buttons with one short word under each.
+- **Unwrap reveal** (docs/01 section 13): the rarity colour floods the screen, the toy's mesh pops up and spins, confetti bursts out, and a mutation is stamped on with a slam. It all grows with rarity: more colour, more confetti (10 pieces per tier) and a longer hold. Light rays spin from Rare up, and a white flash goes off from Legendary up. The numbers are in `Config.Reveal`. Toy meshes reach the client through `ReplicatedStorage/ToyMeshes`, which the server copies at boot.
+- **Phones and tablets** (checked on a Galaxy A06, 705×338, and an iPad 10th gen):
+  - The SHOP and INDEX buttons are 72 px, anchored top-left. Before this change, SHOP overlapped the thumbstick on the A06 by 1 px.
+  - The Shop and Index panels leave 115 px free on each side, so the thumbstick and jump button stay uncovered.
+  - The reveal card shrinks on short screens (`Config.Reveal.CardFitHeight`).
+  - The Wrap! button sits just left of the jump button on every device. The jump button is 70 px on phones and 120 px on tablets, and a fixed spot overlapped it on the iPad.
+
 ---
 
 ## 6. Sound and music
