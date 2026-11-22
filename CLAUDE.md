@@ -55,7 +55,7 @@ src/server/  Main.server.luau (requires each module in Services/ and calls :Init
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
                         ShopService, EventService, MonetizationService, AdventService, TutorialService,
-                        ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
+                        NpcService (5.3: idle loop on IdleNpc-tagged models), ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
                         IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
                         IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
                         (MovementService is the ONLY writer of WalkSpeed: set a named modifier)
@@ -69,7 +69,9 @@ src/client/  Main.local.luau (requires each module in Controllers/)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
 lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
 Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
-mining swing. Snowman Camera is built in code; Workspace/Map/Town/BlackMarketDealer is parts in the place file.
+mining swing. Snowman Camera is built in code. Workspace/Map/Town/BlackMarketDealer: generated R15, anchored root, tagged
+IdleNpc (NpcService plays the default idle on every IdleNpc model). JailService welds a parts pickaxe
+(JailPickaxe) to the right hand while in the cell.
 Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by GuardService at boot
 (elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
 StarterGui (place file): RevealGui (2.2), HudGui (2.3; ShopButton on the left, 4.2), ShopGui (4.2: Panel with

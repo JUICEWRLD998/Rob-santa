@@ -78,6 +78,58 @@ local function putInCell(player: Player)
 	character:PivotTo(CFrame.lookAt(standAt, Vector3.new(facing.X, standAt.Y, facing.Z)))
 end
 
+-- A pickaxe in the right hand while in the cell (step 5.3), so the mining swing has something to
+-- swing. Plain parts welded to the hand, made by the server so everyone sees it. Not a Tool: it
+-- can't be dropped, unequipped or taken out of jail.
+local PICKAXE_NAME = "JailPickaxe"
+
+local function removePickaxe(character: Model?)
+	local pickaxe = character and character:FindFirstChild(PICKAXE_NAME)
+	if pickaxe then
+		pickaxe:Destroy()
+	end
+end
+
+local function givePickaxe(character: Model?)
+	local hand = character and character:FindFirstChild("RightHand")
+	if not character or not hand or not hand:IsA("BasePart") or character:FindFirstChild(PICKAXE_NAME) then
+		return
+	end
+	-- The fist closes around the hand's forward axis (-Z), so the handle runs forward from the
+	-- grip point and the head stands across its far end, in the plane of the swing.
+	local grip = hand:FindFirstChild("RightGripAttachment")
+	local gripAt = if grip and grip:IsA("Attachment") then grip.Position else Vector3.new(0, -0.15, 0)
+	local at = hand.CFrame * CFrame.new(gripAt)
+	local model = Instance.new("Model")
+	model.Name = PICKAXE_NAME
+	local function piece(name: string, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material)
+		local part = Instance.new("Part")
+		part.Name = name
+		part.Size = size
+		part.CFrame = at * offset
+		part.Color = color
+		part.Material = material
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.Massless = true
+		part.CastShadow = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = hand
+		weld.Part1 = part
+		weld.Parent = part
+		part.Parent = model
+	end
+	local wood = Color3.fromRGB(120, 80, 45)
+	-- Cool blue-grey steel: a plain grey read as wood under the jail's orange light.
+	local steel = Color3.fromRGB(150, 165, 190)
+	piece("Handle", Vector3.new(0.22, 0.22, 3), CFrame.new(0, 0, -1.1), wood, Enum.Material.Wood)
+	piece("Head", Vector3.new(0.4, 0.55, 0.55), CFrame.new(0, 0, -2.6), steel, Enum.Material.Metal)
+	piece("PickUp", Vector3.new(0.3, 1.5, 0.38), CFrame.new(0, 0.9, -2.8) * CFrame.Angles(math.rad(-22), 0, 0), steel, Enum.Material.Metal)
+	piece("PickDown", Vector3.new(0.3, 1.5, 0.38), CFrame.new(0, -0.9, -2.8) * CFrame.Angles(math.rad(22), 0, 0), steel, Enum.Material.Metal)
+	model.Parent = character
+end
+
 local function release(player: Player)
 	local visit = visits[player]
 	if not visit then
@@ -93,6 +145,7 @@ local function release(player: Player)
 		root.Anchored = false
 	end
 	player:SetAttribute(JAILED_ATTRIBUTE, nil)
+	removePickaxe(player.Character)
 	PlotService:SendHome(player)
 	send(player, nil)
 end
@@ -108,6 +161,7 @@ local function enterCell(player: Player, visit: Visit)
 	visit.phase = "Cell"
 	visit.endsAt = Workspace:GetServerTimeNow() + Config.Jail.WaitSeconds
 	putInCell(player)
+	givePickaxe(player.Character)
 	send(player, visit)
 	visit.timer = task.delay(Config.Jail.WaitSeconds, function()
 		if visits[player] == visit then
@@ -166,6 +220,7 @@ local function onCharacterAdded(player: Player)
 		local visit = visits[player]
 		if visit and visit.phase == "Cell" then
 			putInCell(player)
+			givePickaxe(player.Character)
 		end
 	end)
 end

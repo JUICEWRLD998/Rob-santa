@@ -138,6 +138,7 @@ local Config = {
 		ElfShrug = { id = "rbxassetid://115282132021549", speed = 1.4, seconds = 1.8 },
 		ElfGrab = { id = "rbxassetid://115427447723879", speed = 1.3, seconds = 1.6 },
 		PlayerMine = { id = "rbxassetid://90781438526960", speed = 1.3, seconds = 1.2 },
+		NpcIdle = { id = "rbxassetid://507766388" }, -- Roblox's own R15 idle (plays in any game)
 		LookAroundChance = 0.5, -- (my pick) share of waypoint stops where the elf looks around
 	},
 
