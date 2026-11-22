@@ -36,6 +36,8 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 - **To click a UI button in a playtest, use `user_mouse_input` with screen `x`/`y` read off a `screen_capture`** (2026-11-21, step 4.4). With the device emulator on, the `instance_path` form clicked nothing once and hung past 120 s the second time. Scripted clicks don't work either: `VirtualInputManager` needs RobloxScript capability.
 - **Playtest `screen_capture` can come back with UI but no 3D world** (same session, emulator off at the time). Edit-mode captures rendered fine, and later playtest captures did too. Don't read a blank world as a broken build: check instances through `execute_luau`, or capture in Edit.
 - **`screen_capture` and `generate_avatar` can hang or time out while `execute_luau` still works** (2026-11-22, step 5.3). Captures came back blank, then ran past 120 s ("Target is not reachable ... DMN_RSRVD_FOCUSED"), and two avatar generations timed out. `generate_animation` still worked. The likely cause is a Studio window that is minimized or in the background. Ask him to bring Studio to the front before visual checks, and don't report a look as checked when no capture came back.
+- **To photograph a short effect, fire it with no wait and call `screen_capture` in the next call** (2026-11-22, step 5.5). A capture takes seconds to arrive. A reveal fired with `task.wait(1)` inside the same `execute_luau` was already gone, and two blank captures looked like a broken reveal.
+- **Device emulator:** `SetOrientationAsync` errors unless a phone or tablet is active, so call `SetDeviceAsync` first. Set the device in Edit, before Play. The touch controls differ by device: on a Galaxy A06 (705×338, GUI 280 px tall under a 58 px inset) the jump button is 70 px at (610,190), and on an iPad it is 120 px. Place our own touch buttons relative to `PlayerGui.TouchGui...JumpButton` (DisguiseController does this), never at a fixed offset. Read live positions with a Client `execute_luau` (AbsolutePosition works there). Call `StopSimulationAsync()` when done.
 - Freeze an NPC for a screenshot with `HumanoidRootPart.Anchored = true` (it walks out of frame between tool calls), and release it after.
 - **A ProximityPrompt only shows while its part is on camera** (2026-11-20, step 4.2). After teleporting the character with `root.CFrame = ...`, the follow camera can end up between the character and the target, facing back, and the prompt stays hidden: E did nothing, which looked like a broken shop prompt. Before pressing a prompt key, point the camera at the target (`workspace.CurrentCamera.CFrame = CFrame.lookAt(behindCharacter, target)`) and confirm with `ProximityPromptService.PromptShown`.
 
@@ -78,7 +80,14 @@ Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by Guard
 StarterGui (place file): RevealGui (2.2), HudGui (2.3; ShopButton on the left, 4.2), ShopGui (4.2: Panel with
 Title, Coins, Status, Close, List/ItemTemplate), IndexGui (4.4: same panel; Bonus label, List/PageTemplate and
 List/RowTemplate with Cells/CellTemplate; HudGui.IndexButton sits above ShopButton, clear of the phone
-thumbstick); controllers fill and animate them, they don't build them
+thumbstick); controllers fill and animate them, they don't build them.
+5.5 skin: RevealGui is a full-screen stage (IgnoreGuiInset; Burst, Rays, Toy ViewportFrame, Card with
+Mutation/StampScale, Confetti/PieceTemplate, Flash). The INDEX and SHOP buttons are 72 px and anchored top-left.
+Shop and Index panels are `UDim2.new(1,-230,0.82,0)` wide (max 620), leaving 115 px clear on each side for
+the thumbstick and jump button. Every ScreenGui uses ZIndexBehavior Global, and each DropShadow sits at its
+parent's ZIndex - 1. Numbers use Luckiest Guy; everything else uses Fredoka One.
+ReplicatedStorage/ToyMeshes is copied from ServerStorage at boot (ToyModel.publishMeshes). It is NOT in
+the place file, because ReplicatedStorage is a synced folder.
 Shop (4.2): Shared/ShopCatalog.luau (items + prices, shared like ToyMath) -> ShopService (RequestPurchase,
 item id only) -> Player attributes Shop_<ItemId> = owned level. GuardService reads Shop_QuietSteps,
 DisguiseService reads Shop_ExtraWrap, ZoneController reads Shop_Zone2/3; ZoneService:OwnsZone reads the save.

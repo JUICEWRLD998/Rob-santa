@@ -102,6 +102,18 @@ local Config = {
 		HoldSeconds = 2.2,
 		HideSeconds = 0.2,
 		ScalePerTier = 0.08, -- "bigger for higher rarity": Common 1.0, Mythic 1.4
+		-- Step 5.5 celebration, bigger with rarity (tier 1 = Common ... 6 = Mythic). All my picks.
+		CardScalePerTier = 0.03, -- the name card grows less than the toy (ScalePerTier), so it never covers it
+		CardFitHeight = 460, -- screens shorter than this many pixels shrink the card to fit ...
+		CardMinFit = 0.72, -- ... but never below this
+		HoldPerTier = 0.35, -- extra seconds on screen per tier above Common
+		BurstTransparency = { 0.82, 0.74, 0.64, 0.52, 0.42, 0.32 }, -- rarity colour over the screen, by tier
+		ConfettiPerTier = 10, -- pieces of confetti per tier (Mythic: 60)
+		RaysFromTier = 3, -- light rays spin behind the toy from Rare up
+		RaysDegreesPerSecond = 40,
+		FlashFromTier = 5, -- a white flash from Legendary up
+		SpinSeconds = 2.4, -- one full turn of the toy
+		StampDelay = 0.45, -- the mutation stamp slams in this long after the pop
 	},
 
 	-- Section 4: guards.
