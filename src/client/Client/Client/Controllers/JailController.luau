@@ -4,15 +4,19 @@
 --   Jailed -> the top panel shows "Free in Ns" and "Coal c / n"; the bottom hint says how to mine;
 --             coal rock prompts show only for rocks not mined yet this visit (mined ones fade).
 --   Free   -> everything hides, rock prompts off.
+-- Step 5.3: holding a coal rock's Mine prompt plays the pickaxe swing (Config.Animations.PlayerMine)
+-- on your own character; the Animator replicates it, so everyone sees you mine.
 -- Display only: JailService decides when you're in, when you're out, and counts the coal.
 -- Payload shape: Types.JailUpdate (validated field by field below; the client trusts nothing).
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes"))
 
 local GUI_WAIT_SECONDS = 15 -- same as HudController; PlayerGui fills when the character first loads
@@ -114,6 +118,32 @@ local function startTimer()
 	end)
 end
 
+-- The pickaxe swing. Starts when you begin holding Mine and runs at least PlayerMine.seconds
+-- (the hold is short, so letting go at once would cut the swing in half).
+local mineTrack: AnimationTrack? = nil
+local mineStartedAt = 0
+local mineHolds = 0 -- bumps each hold, so an old stop timer can't cut a newer swing
+
+local function getMineTrack(): AnimationTrack?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return nil
+	end
+	local existing = mineTrack
+	if existing then
+		return existing
+	end
+	local animation = Instance.new("Animation")
+	animation.AnimationId = Config.Animations.PlayerMine.id
+	local track = animator:LoadAnimation(animation)
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+	mineTrack = track
+	return track
+end
+
 local function onUpdate(value: any)
 	if type(value) ~= "table" then
 		return
@@ -144,6 +174,7 @@ local function onUpdate(value: any)
 			h.Text = if left == 1 then "Mine 1 more glowing rock" else `Mine {left} glowing rocks`
 		end
 		hideStamp()
+		getMineTrack() -- load the swing now: the first load takes about a second
 		panel.Visible = true
 		setWrapsShown(false)
 		startTimer()
@@ -154,6 +185,41 @@ local function onUpdate(value: any)
 		hideStamp()
 	end
 	setRockPrompts()
+end
+
+local function isCoalPrompt(prompt: ProximityPrompt): boolean
+	local parent = prompt.Parent
+	return parent ~= nil and CollectionService:HasTag(parent, "CoalRock")
+end
+
+local function startMining(prompt: ProximityPrompt)
+	if not isCoalPrompt(prompt) or minedRocks == nil then
+		return
+	end
+	local track = getMineTrack()
+	if not track then
+		return
+	end
+	mineHolds += 1
+	mineStartedAt = os.clock()
+	if not track.IsPlaying then
+		track:Play(0.1)
+	end
+	track:AdjustSpeed(Config.Animations.PlayerMine.speed)
+end
+
+local function stopMining(prompt: ProximityPrompt)
+	if not isCoalPrompt(prompt) then
+		return
+	end
+	local hold = mineHolds
+	local left = math.max(0, mineStartedAt + Config.Animations.PlayerMine.seconds - os.clock())
+	task.delay(left, function()
+		local track = mineTrack
+		if hold == mineHolds and track and track.IsPlaying then
+			track:Stop(0.2)
+		end
+	end)
 end
 
 function JailController:Init() end
@@ -189,6 +255,11 @@ function JailController:Start()
 	end
 
 	Remotes.get("JailUpdate").OnClientEvent:Connect(onUpdate)
+	ProximityPromptService.PromptButtonHoldBegan:Connect(startMining)
+	ProximityPromptService.PromptButtonHoldEnded:Connect(stopMining)
+	player.CharacterAdded:Connect(function()
+		mineTrack = nil -- the old Animator went with the old character
+	end)
 end
 
 return JailController

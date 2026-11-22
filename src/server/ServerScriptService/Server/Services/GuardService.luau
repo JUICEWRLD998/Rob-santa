@@ -34,7 +34,7 @@ local CATCH_HEIGHT = 4 -- a player standing on cover this far above the elf can'
 local QUIET_STEPS_ATTRIBUTE = "Shop_QuietSteps" -- ShopCatalog.attributeName("QuietSteps"), set by ShopService
 local INSPECT_STEP_SECONDS = 0.05 -- distance checks while creeping up on a gift box
 -- Roblox's default R15 walk and idle (read from a fresh rig's Animate script, 2026-11-20).
--- Placeholder until the elf's own animations in Phase 5.
+-- The elf's own moments (look around, sniff, shrug, grab) are in Config.Animations (step 5.3).
 local WALK_ANIMATION = "rbxassetid://913402848"
 local IDLE_ANIMATION = "rbxassetid://507766388"
 local WALK_ANIMATION_BASE_SPEED = 12 -- walk cycle plays at WalkSpeed / this, so feet roughly match
@@ -45,6 +45,8 @@ local CONE_THICKNESS = 0.05
 
 type Route = { BasePart } -- waypoints sorted by their Index attribute
 type State = "Patrol" | "Chase"
+type ActionName = "ElfLookAround" | "ElfSniff" | "ElfShrug" | "ElfGrab"
+local ACTION_NAMES: { ActionName } = { "ElfLookAround", "ElfSniff", "ElfShrug", "ElfGrab" }
 
 type Elf = {
 	model: Model,
@@ -65,6 +67,7 @@ type Elf = {
 	chaseSpeed: number,
 	inspectSeconds: number,
 	alarmPosition: Vector3?, -- set by a Snowman Camera bell: chase starts toward here
+	actions: { [ActionName]: AnimationTrack }, -- step 5.3 animations, loaded once per elf
 }
 
 -- Snowman Camera (step 3.5): stands still, turns left and right, rings a bell when it sees you.
@@ -75,6 +78,7 @@ type Snowman = {
 	zone: number,
 	cone: { BasePart },
 	bell: BillboardGui,
+	recLight: BasePart, -- the hat camera's light: dim red, bright red while ringing
 	ringUntil: number, -- os.clock: cone red and "DING DING!" shown until then
 	cooldown: { [Player]: number },
 }
@@ -155,8 +159,9 @@ local function setupCollisionGroup()
 	PhysicsService:CollisionGroupSetCollidable(ELF_GROUP, ELF_GROUP, false)
 end
 
--- Plays the walk cycle while the elf moves and the idle while it stands.
-local function animate(humanoid: Humanoid)
+-- Plays the walk cycle while the elf moves and the idle while it stands. Returns the elf's action
+-- tracks (Config.Animations), loaded once here and played by playAction.
+local function animate(humanoid: Humanoid): { [ActionName]: AnimationTrack }
 	local animator = humanoid:FindFirstChildOfClass("Animator")
 	if not animator then
 		local created = Instance.new("Animator")
@@ -184,6 +189,40 @@ local function animate(humanoid: Humanoid)
 			walk:Stop(0.2)
 		end
 	end)
+	local actions: { [ActionName]: AnimationTrack } = {}
+	for _, name: ActionName in ACTION_NAMES do
+		local track = load(Config.Animations[name].id, Enum.AnimationPriority.Action)
+		track.Looped = name == "ElfSniff" -- the sniff repeats for as long as the elf sniffs
+		actions[name] = track
+	end
+	return actions
+end
+
+-- Plays one of the elf's moments. Stops by itself after the clip's Config `seconds` (0 = until
+-- stopAction), since the generated clips run longer than the moment they are used for.
+local playIds: { [AnimationTrack]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+local function playAction(actions: { [ActionName]: AnimationTrack }, name: ActionName)
+	local settings = Config.Animations[name]
+	local track = actions[name]
+	local id = (playIds[track] or 0) + 1
+	playIds[track] = id -- a replay before the timer fires must not be cut short by the old timer
+	track:Play(0.15)
+	track:AdjustSpeed(settings.speed)
+	if settings.seconds > 0 then
+		task.delay(settings.seconds, function()
+			if playIds[track] == id and track.IsPlaying then
+				track:Stop(0.25)
+			end
+		end)
+	end
+end
+
+local function stopAction(actions: { [ActionName]: AnimationTrack }, name: ActionName)
+	local track = actions[name]
+	if track.IsPlaying then
+		track:Stop(0.25)
+	end
 end
 
 -- One flat triangle on the floor, from two wedges (the standard two-WedgePart triangle).
@@ -259,7 +298,8 @@ local function setConeColor(elf: Elf, color: Color3)
 	end
 end
 
--- The Head Elf's mark until Phase 5 art: a gold hat (it is also 1.3x taller).
+-- Fallback mark for a Head Elf when Templates/HeadElf is missing: a gold hat (it is also 1.3x taller).
+-- Templates/HeadElf (step 5.3) has its own look: darker uniform and a whistle.
 local function addHeadElfHat(head: BasePart)
 	local hat = Instance.new("Part")
 	hat.Name = "HeadElfHat"
@@ -279,10 +319,10 @@ local function addHeadElfHat(head: BasePart)
 	hat.Parent = head
 end
 
-local function spawnElf(template: Model, zone: number, route: Route, startIndex: number, isHead: boolean): Elf?
+local function spawnElf(template: Model, headTemplate: Model?, zone: number, route: Route, startIndex: number, isHead: boolean): Elf?
 	local settings = Config.Guards.ByZone[zone]
 	local headSettings = Config.Guards.HeadElf
-	local model = template:Clone()
+	local model = (if isHead and headTemplate then headTemplate else template):Clone()
 	if isHead then
 		model:ScaleTo(headSettings.scale)
 	end
@@ -312,14 +352,14 @@ local function spawnElf(template: Model, zone: number, route: Route, startIndex:
 	local standAt = here + Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2 + 0.5, 0)
 	model:PivotTo(CFrame.lookAt(standAt, Vector3.new(ahead.X, standAt.Y, ahead.Z)))
 	local cone = buildCone(model, root, humanoid, settings.visionRange, settings.visionAngle)
-	if isHead then
+	if isHead and not headTemplate then
 		addHeadElfHat(head)
 	end
 	model:SetAttribute("Zone", zone)
 	model.Name = if isHead then `HeadElf_Zone{zone}` else `Elf_Zone{zone}`
 	model.Parent = folder
 	root:SetNetworkOwner(nil)
-	animate(humanoid)
+	local actions = animate(humanoid)
 
 	local alert = head:FindFirstChild("Alert")
 	local alertText = alert and alert:FindFirstChild("Text")
@@ -343,6 +383,7 @@ local function spawnElf(template: Model, zone: number, route: Route, startIndex:
 		chaseSpeed = if isHead then headSettings.chaseSpeed else settings.chaseSpeed,
 		inspectSeconds = if isHead then headSettings.inspectSeconds else Config.Disguise.InspectSeconds,
 		alarmPosition = nil,
+		actions = actions,
 	}
 end
 
@@ -500,15 +541,28 @@ followPath = function(elf: Elf, target: Vector3): boolean
 	return true
 end
 
+-- Nearest waypoint on its route that no other elf on the same route is already heading to.
+-- Without the skip, two elves that chased the same player rejoined at the same waypoint and
+-- then walked the loop side by side for good (seen in Zone 1, step 5.2).
 local function nearestWaypointIndex(elf: Elf): number
+	local taken: { [number]: boolean } = {}
+	for _, other in elves do
+		if other ~= elf and other.route == elf.route and other.state == "Patrol" then
+			taken[other.nextIndex] = true
+		end
+	end
 	local best, bestDistance = 1, math.huge
+	local free, freeDistance = nil :: number?, math.huge
 	for i, waypoint in elf.route do
 		local distance = flatDistance(elf.root.Position, waypoint.Position)
 		if distance < bestDistance then
 			best, bestDistance = i, distance
 		end
+		if not taken[i] and distance < freeDistance then
+			free, freeDistance = i, distance
+		end
 	end
-	return best
+	return free or best
 end
 
 ----------------------------------------------------------------------------------------------------
@@ -525,9 +579,19 @@ local function patrolStep(elf: Elf)
 	end
 	elf.humanoid:MoveTo(elf.root.Position) -- stop on the spot
 	elf.nextIndex = elf.nextIndex % #elf.route + 1
-	local pauseUntil = os.clock() + Config.Guards.PatrolPauseSeconds
+	-- Some stops become a look-around (the stop lasts as long as the animation).
+	local pause = Config.Guards.PatrolPauseSeconds
+	local looking = random:NextNumber() < Config.Animations.LookAroundChance
+	if looking then
+		playAction(elf.actions, "ElfLookAround")
+		pause = math.max(pause, Config.Animations.ElfLookAround.seconds)
+	end
+	local pauseUntil = os.clock() + pause
 	while elf.state == "Patrol" and os.clock() < pauseUntil do
 		task.wait(CHECK_SECONDS)
+	end
+	if looking then
+		stopAction(elf.actions, "ElfLookAround") -- spotted someone mid-look: drop it and run
 	end
 end
 
@@ -541,7 +605,8 @@ local function setAlert(elf: Elf, on: boolean)
 		if text then
 			text.Text = "HEY!"
 			task.delay(Config.Guards.HeyShowSeconds, function()
-				if elf.state == "Chase" then
+				-- Only if it still says HEY!: a quick catch has already put "GOTCHA!" there.
+				if elf.state == "Chase" and text.Text == "HEY!" then
 					text.Text = "!"
 				end
 			end)
@@ -612,6 +677,7 @@ local function inspect(elf: Elf, player: Player): InspectResult
 		return "Visible"
 	end
 	DisguiseService:BeginInspect(player)
+	playAction(elf.actions, "ElfSniff")
 	local result: InspectResult = "Fooled"
 	local endsAt = os.clock() + elf.inspectSeconds
 	local step = 0
@@ -627,6 +693,7 @@ local function inspect(elf: Elf, player: Player): InspectResult
 		step += 1
 		task.wait(0.1)
 	end
+	stopAction(elf.actions, "ElfSniff")
 	DisguiseService:EndInspect(player, result == "Fooled")
 	return result
 end
@@ -650,6 +717,7 @@ local function runChase(elf: Elf)
 	local pathTried = false
 	local pathIndex = 2
 	local lastWords: string? = nil -- said after the chase ends ("...Huh. Just a present.", "GOTCHA!")
+	local finale: ActionName? = nil -- played on the spot when the chase ends (grab or shrug)
 	while elf.model.Parent and player and player.Parent do
 		local target = liveTarget(player)
 		local now = os.clock()
@@ -660,10 +728,12 @@ local function runChase(elf: Elf)
 			local result = inspect(elf, player)
 			if result == "Gotcha" then
 				lastWords = "GOTCHA!"
+				finale = "ElfGrab"
 				onCaught(elf, player)
 				break
 			elseif result == "Fooled" then
 				lastWords = "...Huh. Just a present."
+				finale = "ElfShrug"
 				elf.ignoreUntil[player] = os.clock() + Config.Disguise.FooledIgnoreSeconds
 				break
 			elseif result == "Gone" then
@@ -678,6 +748,8 @@ local function runChase(elf: Elf)
 			flatDistance(elf.root.Position, targetPosition) <= guards.CatchDistance
 			and math.abs(elf.root.Position.Y - targetPosition.Y) <= CATCH_HEIGHT
 		then
+			lastWords = "GOTCHA!"
+			finale = "ElfGrab"
 			onCaught(elf, player)
 			break
 		end
@@ -718,14 +790,24 @@ local function runChase(elf: Elf)
 		local cooldownEnd = os.clock() + guards.GiveUpCooldownSeconds
 		elf.ignoreUntil[player] = math.max(elf.ignoreUntil[player] or 0, cooldownEnd)
 	end
+	local words = lastWords
+	setAlert(elf, false)
+	if words then
+		say(elf, words)
+	end
+	-- Grab or shrug on the spot before walking back. Still in Chase state meanwhile, so it can't
+	-- spot anyone or answer a bell mid-animation.
+	local moment: ActionName? = finale
+	if moment and elf.model.Parent then
+		elf.humanoid:MoveTo(elf.root.Position)
+		playAction(elf.actions, moment)
+		task.wait(Config.Animations[moment].seconds)
+	end
 	elf.state = "Patrol"
 	elf.target = nil
 	elf.humanoid.WalkSpeed = guards.PatrolWalkSpeed
-	setAlert(elf, false)
 	elf.nextIndex = nearestWaypointIndex(elf)
-	local words = lastWords
 	if words then
-		say(elf, words)
 		task.delay(Config.Disguise.HuhShowSeconds, function()
 			local text = elf.alertText
 			if elf.alert and elf.state == "Patrol" and text and text.Text == words then
@@ -736,7 +818,7 @@ local function runChase(elf: Elf)
 end
 
 ----------------------------------------------------------------------------------------------------
--- Snowman Camera (step 3.5, section 4). Placeholder snowman built from parts until Phase 5 art.
+-- Snowman Camera (step 3.5, section 4). Built from parts here (no rig needed); dressed up in 5.3.
 
 -- Every patrolling elf in the zone hears the bell and runs to where the snowman saw the player.
 local function soundAlarm(zone: number, player: Player, position: Vector3)
@@ -789,6 +871,27 @@ local function buildSnowman(spot: BasePart, zone: number): Snowman?
 	snowPart(model, "EyeR", ball, Vector3.one * 0.35, CFrame.new(0.42, 8.0, -1.05), base, black, Enum.Material.SmoothPlastic)
 	snowPart(model, "Nose", Enum.PartType.Block, Vector3.new(0.3, 0.3, 1), CFrame.new(0, 7.7, -1.5), base, Color3.fromRGB(255, 140, 40), Enum.Material.SmoothPlastic)
 	snowPart(model, "Hat", Enum.PartType.Cylinder, Vector3.new(1.4, 1.8, 1.8), CFrame.new(0, 9.4, 0) * CFrame.Angles(0, 0, math.rad(90)), base, black, Enum.Material.SmoothPlastic)
+	-- Step 5.3 look: hat brim and red band, a striped scarf, coal buttons, stick arms, and a little
+	-- security camera on the hat whose red light flares when it rings.
+	local red = Color3.fromRGB(205, 35, 45)
+	local upright = CFrame.Angles(0, 0, math.rad(90))
+	local smooth = Enum.Material.SmoothPlastic
+	snowPart(model, "HatBrim", Enum.PartType.Cylinder, Vector3.new(0.15, 2.6, 2.6), CFrame.new(0, 8.75, 0) * upright, base, black, smooth)
+	snowPart(model, "HatBand", Enum.PartType.Cylinder, Vector3.new(0.3, 1.85, 1.85), CFrame.new(0, 9.0, 0) * upright, base, red, smooth)
+	snowPart(model, "Scarf", Enum.PartType.Cylinder, Vector3.new(0.5, 2.7, 2.7), CFrame.new(0, 6.65, 0) * upright, base, red, Enum.Material.Fabric)
+	snowPart(model, "ScarfStripe", Enum.PartType.Cylinder, Vector3.new(0.18, 2.75, 2.75), CFrame.new(0, 6.65, 0) * upright, base, white, Enum.Material.Fabric)
+	snowPart(model, "ScarfTail", Enum.PartType.Block, Vector3.new(0.6, 1.6, 0.2), CFrame.new(0.7, 5.9, -1.3) * CFrame.Angles(0.2, 0, -0.15), base, red, Enum.Material.Fabric)
+	for i, y in { 5.8, 5.1, 4.4 } do
+		local z = -math.sqrt(math.max(0, 1.6 ^ 2 - (y - 5.3) ^ 2)) + 0.05
+		snowPart(model, `Button{i}`, ball, Vector3.one * 0.32, CFrame.new(0, y, z), base, black, smooth)
+	end
+	local brown = Color3.fromRGB(92, 62, 38)
+	snowPart(model, "ArmL", Enum.PartType.Block, Vector3.new(2.4, 0.18, 0.18), CFrame.new(-2.3, 5.9, 0) * CFrame.Angles(0, 0, math.rad(-25)), base, brown, Enum.Material.Wood)
+	snowPart(model, "ArmR", Enum.PartType.Block, Vector3.new(2.4, 0.18, 0.18), CFrame.new(2.3, 5.9, 0) * CFrame.Angles(0, 0, math.rad(25)), base, brown, Enum.Material.Wood)
+	local grey = Color3.fromRGB(70, 74, 84)
+	snowPart(model, "CameraBody", Enum.PartType.Block, Vector3.new(0.7, 0.55, 1.1), CFrame.new(0, 10.4, -0.1), base, grey, Enum.Material.Metal)
+	snowPart(model, "CameraLens", Enum.PartType.Cylinder, Vector3.new(0.3, 0.42, 0.42), CFrame.new(0, 10.4, -0.75) * CFrame.Angles(0, math.rad(90), 0), base, black, Enum.Material.Glass)
+	local recLight = snowPart(model, "RecLight", ball, Vector3.one * 0.2, CFrame.new(0.22, 10.72, -0.5), base, Color3.fromRGB(120, 20, 20), Enum.Material.Neon)
 	local lantern = snowPart(model, "Lantern", Enum.PartType.Block, Vector3.one * 0.8, CFrame.new(1.9, 5.4, -1.3), base, Color3.fromRGB(255, 210, 90), Enum.Material.Neon)
 	local light = Instance.new("PointLight")
 	light.Color = Color3.fromRGB(255, 200, 120)
@@ -842,6 +945,7 @@ local function buildSnowman(spot: BasePart, zone: number): Snowman?
 		zone = zone,
 		cone = cone,
 		bell = bell,
+		recLight = recLight,
 		ringUntil = 0,
 		cooldown = setmetatable({}, { __mode = "k" }) :: any,
 	}
@@ -849,6 +953,8 @@ end
 
 local function setSnowmanRinging(snowman: Snowman, on: boolean)
 	snowman.bell.Enabled = on
+	snowman.recLight.Color = if on then Color3.fromRGB(255, 40, 40) else Color3.fromRGB(120, 20, 20)
+	snowman.recLight.Size = Vector3.one * (if on then 0.32 else 0.2)
 	for _, part in snowman.cone do
 		part.Color = if on then CONE_CHASE_COLOR else CONE_PATROL_COLOR
 	end
@@ -956,6 +1062,8 @@ function GuardService:Start()
 		warn("[GuardService] ServerStorage/Templates/ElfGuard is missing; no elves spawned")
 		return
 	end
+	local headFound = templates and templates:FindFirstChild("HeadElf")
+	local headTemplate: Model? = if headFound and headFound:IsA("Model") then headFound else nil
 	for zone = 1, Config.LaunchZones do
 		local settings = Config.Guards.ByZone[zone]
 		local routes = routesByZone[zone]
@@ -970,11 +1078,17 @@ function GuardService:Start()
 					table.insert(routeList, route)
 				end
 			end
+			-- Zones with several lanes (Zone 1 has a west and an east lane) give each elf its own;
+			-- shuffled so a lone elf doesn't always guard the same half.
+			for k = #routeList, 2, -1 do
+				local j = random:NextInteger(1, k)
+				routeList[k], routeList[j] = routeList[j], routeList[k]
+			end
 			for i = 1, count do
 				local route = routeList[(i - 1) % #routeList + 1]
 				if route then
 					local startIndex = math.floor((i - 1) * #route / count) % #route + 1
-					local elf = spawnElf(template, zone, route, startIndex, i > regular)
+					local elf = spawnElf(template, headTemplate, zone, route, startIndex, i > regular)
 					if elf then
 						table.insert(elves, elf)
 						task.spawn(run, elf)

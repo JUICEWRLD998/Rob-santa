@@ -128,6 +128,19 @@ local Config = {
 		},
 	},
 
+	-- Step 5.3: generated R15 animations (Studio MCP generate_animation), published under the game's
+	-- owner. An animation owned by anyone else plays in Studio but NOT in the live game.
+	-- speed = playback speed; seconds = how long it plays before it is stopped (the generated clips
+	-- run 3 to 9 s, longer than these moments).
+	Animations = {
+		ElfLookAround = { id = "rbxassetid://116136038909543", speed = 1, seconds = 2.6 },
+		ElfSniff = { id = "rbxassetid://117688415760927", speed = 1, seconds = 0 }, -- loops for the whole sniff
+		ElfShrug = { id = "rbxassetid://115282132021549", speed = 1.4, seconds = 1.8 },
+		ElfGrab = { id = "rbxassetid://115427447723879", speed = 1.3, seconds = 1.6 },
+		PlayerMine = { id = "rbxassetid://90781438526960", speed = 1.3, seconds = 1.2 },
+		LookAroundChance = 0.5, -- (my pick) share of waypoint stops where the elf looks around
+	},
+
 	-- Testing switches. They only work inside Roblox Studio (RunService:IsStudio()); a published
 	-- game ignores them completely.
 	Debug = {
