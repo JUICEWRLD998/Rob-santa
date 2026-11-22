@@ -75,6 +75,13 @@ with exaggerated head bobs, then pauses suspiciously. About 3 seconds, cartoon t
 
 > **Beginner trap:** an animation only plays in your game if it's **published under the same owner as the game** (your account, or your Community if the game belongs to the Community). If an animation works in Studio but not in the live game, this is almost always why.
 
+What was built in step 5.3:
+- **Elf Guard** = generated Option A (slim elf, red pointy hat with a bell, white collar), plus a brass lantern with a warm light welded to its right hand. `ServerStorage/Templates/ElfGuard`. The other generated options (B, B (1), C) and the old 3.1 placeholder are kept in `ServerStorage/CharacterOptions`. To swap in another option, copy it into Templates as `ElfGuard`, then move `Head/Alert` and `Head/AlertSound` from the current elf into its Head.
+- **Head Elf** = the same elf with a darker uniform (SurfaceAppearance tint on clothing parts only), a silver whistle on a red cord, and the lantern. `Templates/HeadElf`, scaled 1.3x by the code. If that template is missing, the code falls back to the plain elf with a gold hat.
+- **Snowman Camera** is built in code (GuardService `buildSnowman`), so it stays on disk. It now has a hat brim and red band, a striped scarf, coal buttons, stick arms, and a small security camera on its hat. The camera's red light flares while the bell rings.
+- **Black Market dealer** = a shady snowman made from plain parts, beside the stall (`Workspace/Map/Town/BlackMarketDealer`): sunglasses, fedora, purple-and-green scarf, a black gift held out. It has no scripts and doesn't move. `generate_avatar` timed out twice for a raccoon dealer, so the snowman is what shipped.
+- **Animations**, all published under the game owner's account, IDs in `Config.Animations`: look around (about half the waypoint stops; the stop lasts as long as the look), sniff (loops for the whole sniff), shrug (after "...Huh. Just a present."), GOTCHA grab (on any catch, then back to patrol), and the player's pickaxe swing (while holding Mine on a coal rock; loaded when you enter jail). The editable clips are in `ServerStorage/RBX_ASSISTANT_ANIMGEN`. The generated clips run 3–9 s, so each has a `seconds` cut-off and a `speed`.
+
 ---
 
 ## 4. Props and the world

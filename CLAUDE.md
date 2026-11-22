@@ -35,6 +35,7 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 - **Before driving a playtest, check he isn't playing in it** (move a sample over a few seconds). Twice in 3.1/3.2 he was; my teleports and a Scriptable camera fought his controls. A custom-camera `screen_capture` also snaps back to his live camera while he moves.
 - **To click a UI button in a playtest, use `user_mouse_input` with screen `x`/`y` read off a `screen_capture`** (2026-11-21, step 4.4). With the device emulator on, the `instance_path` form clicked nothing once and hung past 120 s the second time. Scripted clicks don't work either: `VirtualInputManager` needs RobloxScript capability.
 - **Playtest `screen_capture` can come back with UI but no 3D world** (same session, emulator off at the time). Edit-mode captures rendered fine, and later playtest captures did too. Don't read a blank world as a broken build: check instances through `execute_luau`, or capture in Edit.
+- **`screen_capture` and `generate_avatar` can hang or time out while `execute_luau` still works** (2026-11-22, step 5.3). Captures came back blank, then ran past 120 s ("Target is not reachable ... DMN_RSRVD_FOCUSED"), and two avatar generations timed out. `generate_animation` still worked. The likely cause is a Studio window that is minimized or in the background. Ask him to bring Studio to the front before visual checks, and don't report a look as checked when no capture came back.
 - Freeze an NPC for a screenshot with `HumanoidRootPart.Anchored = true` (it walks out of frame between tool calls), and release it after.
 - **A ProximityPrompt only shows while its part is on camera** (2026-11-20, step 4.2). After teleporting the character with `root.CFrame = ...`, the follow camera can end up between the character and the target, facing back, and the prompt stays hidden: E did nothing, which looked like a broken shop prompt. Before pressing a prompt key, point the camera at the target (`workspace.CurrentCamera.CFrame = CFrame.lookAt(behindCharacter, target)`) and confirm with `ProximityPromptService.PromptShown`.
 
@@ -65,7 +66,10 @@ src/client/  Main.local.luau (requires each module in Controllers/)
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController
-ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard (3.1, temporary R15 rig, no scripts), later snowman
+ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
+lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
+Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
+mining swing. Snowman Camera is built in code; Workspace/Map/Town/BlackMarketDealer is parts in the place file.
 Workspace/Guards: live elves, Head Elf and Snowman Cameras, all created by GuardService at boot
 (elves in collision group "Elves"; snowmen are built from parts on SnowmanCameraSpot-tagged pads)
 StarterGui (place file): RevealGui (2.2), HudGui (2.3; ShopButton on the left, 4.2), ShopGui (4.2: Panel with
