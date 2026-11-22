@@ -36,6 +36,8 @@ Script Sync caveats: never put attributes or tags on scripts; don't put non-scri
 - **To click a UI button in a playtest, use `user_mouse_input` with screen `x`/`y` read off a `screen_capture`** (2026-11-21, step 4.4). With the device emulator on, the `instance_path` form clicked nothing once and hung past 120 s the second time. Scripted clicks don't work either: `VirtualInputManager` needs RobloxScript capability.
 - **Playtest `screen_capture` can come back with UI but no 3D world** (same session, emulator off at the time). Edit-mode captures rendered fine, and later playtest captures did too. Don't read a blank world as a broken build: check instances through `execute_luau`, or capture in Edit.
 - **`screen_capture` and `generate_avatar` can hang or time out while `execute_luau` still works** (2026-11-22, step 5.3). Captures came back blank, then ran past 120 s ("Target is not reachable ... DMN_RSRVD_FOCUSED"), and two avatar generations timed out. `generate_animation` still worked. The likely cause is a Studio window that is minimized or in the background. Ask him to bring Studio to the front before visual checks, and don't report a look as checked when no capture came back.
+- **TweenService stalls while Studio is in the background; Heartbeat keeps running** (2026-11-22, step 5.6). A tween on a plain NumberValue stayed `Playing` at 0 after 1.5 s, while 90 Heartbeats ran. The music never faded in. Fades that a test must observe should be stepped on Heartbeat (SoundController does this). Don't read a stalled tween as a bug in the game.
+- **Two `execute_luau` calls in one message run one after the other.** A server call with `task.wait` blocks, so a client listener started in the next call misses everything. Schedule the server side with `task.delay` and return at once, then listen on the client.
 - **To photograph a short effect, fire it with no wait and call `screen_capture` in the next call** (2026-11-22, step 5.5). A capture takes seconds to arrive. A reveal fired with `task.wait(1)` inside the same `execute_luau` was already gone, and two blank captures looked like a broken reveal.
 - **Device emulator:** `SetOrientationAsync` errors unless a phone or tablet is active, so call `SetDeviceAsync` first. Set the device in Edit, before Play. The touch controls differ by device: on a Galaxy A06 (705×338, GUI 280 px tall under a 58 px inset) the jump button is 70 px at (610,190), and on an iPad it is 120 px. Place our own touch buttons relative to `PlayerGui.TouchGui...JumpButton` (DisguiseController does this), never at a fixed offset. Read live positions with a Client `execute_luau` (AbsolutePosition works there). Call `StopSimulationAsync()` when done.
 - Freeze an NPC for a screenshot with `HumanoidRootPart.Anchored = true` (it walks out of frame between tool calls), and release it after.
@@ -68,7 +70,7 @@ src/client/  Main.local.luau (requires each module in Controllers/)
              Controllers/  HudController, PresentController, RevealController, OwnerPromptController,
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
-                           TutorialController
+                           TutorialController, SoundController (5.6)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
 lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
 Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
@@ -86,6 +88,10 @@ Mutation/StampScale, Confetti/PieceTemplate, Flash). The INDEX and SHOP buttons 
 Shop and Index panels are `UDim2.new(1,-230,0.82,0)` wide (max 620), leaving 115 px clear on each side for
 the thumbstick and jump button. Every ScreenGui uses ZIndexBehavior Global, and each DropShadow sits at its
 parent's ZIndex - 1. Numbers use Luckiest Guy; everything else uses Fredoka One.
+Sound (5.6): SoundService/Sfx and SoundService/Music (place file; APM Music / Pro Sound Effects only, each
+Sound has a Source attribute). SoundController (client) plays them from player attributes the server sets:
+CarryCount, ChasedBy (GuardService: elves chasing you), Jailed, Unwrapping (UnwrapService), Coins, plus the
+DisguiseUpdate and UnwrapReveal remotes. Numbers in Config.Audio.
 ReplicatedStorage/ToyMeshes is copied from ServerStorage at boot (ToyModel.publishMeshes). It is NOT in
 the place file, because ReplicatedStorage is a synced folder.
 Shop (4.2): Shared/ShopCatalog.luau (items + prices, shared like ToyMath) -> ShopService (RequestPurchase,

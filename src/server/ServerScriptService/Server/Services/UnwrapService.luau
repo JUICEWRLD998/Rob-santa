@@ -89,7 +89,12 @@ local function unwrapOne(player: Player, present: PresentService.Delivered)
 		)
 		spin:Play()
 	end
+	-- Display only (step 5.6): the client plays a drumroll while this is set.
+	player:SetAttribute("Unwrapping", true)
 	task.wait(Config.Presents.UnwrapSeconds)
+	if player.Parent then
+		player:SetAttribute("Unwrapping", nil)
+	end
 	present.model:Destroy()
 	if player.Parent == nil then
 		return
