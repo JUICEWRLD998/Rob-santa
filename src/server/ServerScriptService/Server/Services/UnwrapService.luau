@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Toys = require(ReplicatedStorage.Shared.Toys)
 local Types = require(ReplicatedStorage.Shared.Types)
+local DataService = require(script.Parent.DataService)
 local IndexService = require(script.Parent.IndexService)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
@@ -32,6 +33,7 @@ local UnwrapService = {}
 
 local rng = Random.new()
 local unwrapReveal: RemoteEvent
+local notify: RemoteEvent
 local matOf: { [number]: BasePart } = {}
 local tableOf: { [number]: BasePart } = {}
 local queueOf: { [Player]: Queue } = {}
@@ -63,6 +65,23 @@ local function pickToy(rarity: Types.Rarity): Types.ToyDef?
 		return nil
 	end
 	return choices[rng:NextInteger(1, #choices)]
+end
+
+-- Lucky Wrap (developer product, 6.2): if the player has one saved, use it up and return the
+-- rarity one tier higher. A Mythic present can't go higher, so it keeps the wrap for later.
+local function luckyRarity(player: Player, rarity: Types.Rarity): Types.Rarity?
+	local data = DataService:GetData(player)
+	local tier = table.find(Config.RarityOrder, rarity)
+	if not data or data.luckyWraps <= 0 or not tier or tier >= #Config.RarityOrder then
+		return nil
+	end
+	local higher: Types.Rarity = Config.RarityOrder[tier + 1] :: any
+	if #Toys.ofRarity(higher) == 0 then
+		return nil
+	end
+	data.luckyWraps -= 1
+	player:SetAttribute("LuckyWraps", data.luckyWraps)
+	return higher
 end
 
 -- True if the root is above the mat's footprint and no higher than DeliveryMatHeight.
@@ -100,9 +119,15 @@ local function unwrapOne(player: Player, present: PresentService.Delivered)
 		return
 	end
 
-	local toy = pickToy(present.rarity)
+	local rarity: Types.Rarity = present.rarity
+	local lucky = luckyRarity(player, rarity)
+	if lucky then
+		notify:FireClient(player, `Lucky Wrap! Your {rarity} present held a {lucky} toy!`)
+		rarity = lucky :: Types.Rarity
+	end
+	local toy = pickToy(rarity)
 	if not toy then
-		warn(`[UnwrapService] no toys of rarity {present.rarity} in Toys.luau`)
+		warn(`[UnwrapService] no toys of rarity {rarity} in Toys.luau`)
 		return
 	end
 	local mutation: Types.Mutation? = rollMutation()
@@ -186,6 +211,7 @@ end
 
 function UnwrapService:Init()
 	unwrapReveal = Remotes.get("UnwrapReveal")
+	notify = Remotes.get("Notify")
 	collect("DropMat", matOf)
 	collect("UnwrapTable", tableOf)
 end

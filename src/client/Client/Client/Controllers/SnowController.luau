@@ -68,6 +68,10 @@ function SnowController:Start()
 		local position = camera.CFrame.Position
 		local underground = position.Y < Config.Snow.OffBelowY
 		emitter.Enabled = not underground
+		-- Blizzard (6.2): much heavier snow while one blows (server time in a Workspace attribute).
+		local endsAt = workspace:GetAttribute("BlizzardEndsAt")
+		local blizzard = type(endsAt) == "number" and workspace:GetServerTimeNow() < endsAt
+		emitter.Rate = Config.Snow.Rate * (if blizzard then Config.DevProducts.Blizzard.snowMultiplier else 1)
 		part.CFrame = CFrame.new(position + Vector3.new(0, Config.Snow.HeightAboveCamera, 0))
 	end)
 end

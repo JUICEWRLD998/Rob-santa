@@ -101,6 +101,28 @@ local function setChased(player: Player, delta: number)
 	end
 end
 local snowmen: { Snowman } = {}
+
+-- Blizzard (developer product, 6.2): while it blows, every elf and snowman sees only
+-- elfVisionMultiplier as far, and elves walk and run at elfSpeedMultiplier. MonetizationService
+-- turns it on and off through GuardService:SetBlizzard.
+local blizzardOn = false
+
+local function visionScale(): number
+	return if blizzardOn then Config.DevProducts.Blizzard.elfVisionMultiplier else 1
+end
+
+local function speedScale(): number
+	return if blizzardOn then Config.DevProducts.Blizzard.elfSpeedMultiplier else 1
+end
+
+local function patrolSpeed(): number
+	return Config.Guards.PatrolWalkSpeed * speedScale()
+end
+
+local function chaseSpeedOf(elf: Elf): number
+	return elf.chaseSpeed * speedScale()
+end
+
 local random = Random.new()
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -350,7 +372,7 @@ local function spawnElf(template: Model, headTemplate: Model?, zone: number, rou
 			part.CollisionGroup = ELF_GROUP
 		end
 	end
-	humanoid.WalkSpeed = Config.Guards.PatrolWalkSpeed
+	humanoid.WalkSpeed = patrolSpeed()
 	humanoid.BreakJointsOnDeath = false
 	-- Elves never climb, swim or sit; turning those states off saves work and odd poses.
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
@@ -362,7 +384,7 @@ local function spawnElf(template: Model, headTemplate: Model?, zone: number, rou
 	local ahead = route[nextIndex].Position
 	local standAt = here + Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2 + 0.5, 0)
 	model:PivotTo(CFrame.lookAt(standAt, Vector3.new(ahead.X, standAt.Y, ahead.Z)))
-	local cone = buildCone(model, root, humanoid, settings.visionRange, settings.visionAngle)
+	local cone = buildCone(model, root, humanoid, settings.visionRange * visionScale(), settings.visionAngle)
 	if isHead and not headTemplate then
 		addHeadElfHat(head)
 	end
@@ -478,7 +500,7 @@ local function findVisiblePlayer(elf: Elf): Player?
 			local position = target.root.Position
 			if
 				insideZone(elf.zone, position)
-				and inCone(elf, position, noticeRange(player, settings.visionRange), settings.visionAngle)
+				and inCone(elf, position, noticeRange(player, settings.visionRange * visionScale()), settings.visionAngle)
 				and hasLineOfSight(elf, target.character)
 			then
 				local distance = flatDistance(elf.root.Position, position)
@@ -670,13 +692,13 @@ local function inspect(elf: Elf, player: Player): InspectResult
 		elseif not elf.model.Parent or not liveTarget(player) then
 			return "Gone"
 		elseif not DisguiseService:IsDisguised(player) then
-			elf.humanoid.WalkSpeed = elf.chaseSpeed
+			elf.humanoid.WalkSpeed = chaseSpeedOf(elf)
 			return "Visible"
 		elseif os.clock() - walkStart > settings.InspectWalkMaxSeconds then
 			return "Fooled" -- blocked on the way: it loses interest
 		end
 		if distance <= reach + settings.InspectCreepStuds then
-			elf.humanoid.WalkSpeed = Config.Guards.PatrolWalkSpeed
+			elf.humanoid.WalkSpeed = patrolSpeed()
 		end
 		elf.humanoid:MoveTo(boxAt)
 		task.wait(if distance <= reach + settings.InspectCreepStuds then INSPECT_STEP_SECONDS else tick)
@@ -716,7 +738,7 @@ local function runChase(elf: Elf)
 	if player then
 		setChased(player, 1)
 	end
-	elf.humanoid.WalkSpeed = elf.chaseSpeed
+	elf.humanoid.WalkSpeed = chaseSpeedOf(elf)
 	setAlert(elf, true)
 	local startedAt = os.clock()
 	local lastSeenAt = startedAt
@@ -754,7 +776,7 @@ local function runChase(elf: Elf)
 				break
 			end
 			lastSeenAt = os.clock() -- "Visible": they popped out in front of it; chase on
-			elf.humanoid.WalkSpeed = elf.chaseSpeed -- back to full speed after creeping up
+			elf.humanoid.WalkSpeed = chaseSpeedOf(elf) -- back to full speed after creeping up
 			continue
 		end
 		local targetPosition = target.root.Position
@@ -770,7 +792,7 @@ local function runChase(elf: Elf)
 		-- While chasing, the elf has turned toward you: sight = in range + clear line, any angle.
 		-- Leaving its zone counts as lost sight, so it never follows you out.
 		local seen = insideZone(elf.zone, targetPosition)
-			and flatDistance(elf.root.Position, targetPosition) <= settings.visionRange
+			and flatDistance(elf.root.Position, targetPosition) <= settings.visionRange * visionScale()
 			and hasLineOfSight(elf, target.character)
 		if seen then
 			lastSeenAt = now
@@ -820,7 +842,7 @@ local function runChase(elf: Elf)
 	end
 	elf.state = "Patrol"
 	elf.target = nil
-	elf.humanoid.WalkSpeed = guards.PatrolWalkSpeed
+	elf.humanoid.WalkSpeed = patrolSpeed()
 	elf.nextIndex = nearestWaypointIndex(elf)
 	if words then
 		task.delay(Config.Disguise.HuhShowSeconds, function()
@@ -863,6 +885,31 @@ local function snowPart(model: Model, name: string, shape: Enum.PartType, size: 
 	part.CastShadow = true
 	part.Parent = model
 	return part
+end
+
+local SNOWMAN_PIVOT_HEIGHT = 2.2 -- the snowman's pivot is its base ball's centre, this far up
+
+-- The snowman's sight cone on the floor, from its pivot (`pivot`, facing where it looks).
+-- Anchored inside the model, so the sweep's PivotTo turns it with the snowman.
+local function snowmanCone(model: Model, pivot: CFrame, range: number): { BasePart }
+	local settings = Config.Guards.SnowmanCamera
+	local cone: { BasePart } = {}
+	local apex = pivot.Position - Vector3.new(0, SNOWMAN_PIVOT_HEIGHT - 0.08, 0)
+	local forward = Vector3.new(pivot.LookVector.X, 0, pivot.LookVector.Z).Unit
+	local half = math.rad(settings.visionAngle / 2)
+	local slices = Config.Guards.ConeSlices
+	local points: { Vector3 } = {}
+	for i = 0, slices do
+		local theta = -half + (2 * half) * i / slices
+		table.insert(points, apex + CFrame.Angles(0, theta, 0):VectorToWorldSpace(forward) * range)
+	end
+	for i = 1, slices do
+		triangle(apex, points[i], points[i + 1], model, cone)
+	end
+	for _, part in cone do
+		part.Anchored = true
+	end
+	return cone
 end
 
 local function buildSnowman(spot: BasePart, zone: number): Snowman?
@@ -916,22 +963,7 @@ local function buildSnowman(spot: BasePart, zone: number): Snowman?
 	model.PrimaryPart = bottom
 
 	-- Its sight drawn on the floor, like an elf's cone; turns with the snowman.
-	local cone: { BasePart } = {}
-	local apex = Vector3.new(at.X, floorY + 0.08, at.Z)
-	local forward = base.LookVector
-	local half = math.rad(settings.visionAngle / 2)
-	local slices = Config.Guards.ConeSlices
-	local points: { Vector3 } = {}
-	for i = 0, slices do
-		local theta = -half + (2 * half) * i / slices
-		table.insert(points, apex + CFrame.Angles(0, theta, 0):VectorToWorldSpace(forward) * settings.visionRange)
-	end
-	for i = 1, slices do
-		triangle(apex, points[i], points[i + 1], model, cone)
-	end
-	for _, part in cone do
-		part.Anchored = true
-	end
+	local cone = snowmanCone(model, base * CFrame.new(0, SNOWMAN_PIVOT_HEIGHT, 0), settings.visionRange * visionScale())
 
 	-- "DING DING!" over its hat when it rings (AlwaysOnTop off: screen_capture can't see it on).
 	local bell = Instance.new("BillboardGui")
@@ -956,7 +988,7 @@ local function buildSnowman(spot: BasePart, zone: number): Snowman?
 	return {
 		model = model,
 		head = head,
-		base = base * CFrame.new(0, 2.2, 0), -- pivot = the base ball's centre
+		base = base * CFrame.new(0, SNOWMAN_PIVOT_HEIGHT, 0), -- pivot = the base ball's centre
 		zone = zone,
 		cone = cone,
 		bell = bell,
@@ -1007,7 +1039,7 @@ local function snowmanLook(snowman: Snowman)
 			local position = target.root.Position
 			if
 				insideZone(snowman.zone, position)
-				and coneContains(origin.Position, origin.LookVector, position, noticeRange(player, settings.visionRange), settings.visionAngle)
+				and coneContains(origin.Position, origin.LookVector, position, noticeRange(player, settings.visionRange * visionScale()), settings.visionAngle)
 				and lineOfSightFrom(snowman.head.Position, target.character)
 			then
 				snowman.cooldown[player] = now + settings.alarmCooldownSeconds
@@ -1050,6 +1082,52 @@ local function visionLoop()
 			end
 		end
 	end
+end
+
+-- Redraws every elf's and snowman's floor cone at its current reach (the Blizzard halves it), so
+-- the cones never lie about what an elf can see. Keeps each cone's current colour.
+local function redrawCones()
+	for _, elf in elves do
+		if not elf.model.Parent then
+			continue
+		end
+		local color = if elf.cone[1] then elf.cone[1].Color else CONE_PATROL_COLOR
+		local old = elf.model:FindFirstChild("VisionCone")
+		if old then
+			old:Destroy()
+		end
+		local settings = Config.Guards.ByZone[elf.zone]
+		elf.cone = buildCone(elf.model, elf.root, elf.humanoid, settings.visionRange * visionScale(), settings.visionAngle)
+		setConeColor(elf, color)
+	end
+	local reach = Config.Guards.SnowmanCamera.visionRange * visionScale()
+	for _, snowman in snowmen do
+		if not snowman.model.Parent then
+			continue
+		end
+		local color = if snowman.cone[1] then snowman.cone[1].Color else CONE_PATROL_COLOR
+		for _, part in snowman.cone do
+			part:Destroy()
+		end
+		snowman.cone = snowmanCone(snowman.model, snowman.model:GetPivot(), reach)
+		for _, part in snowman.cone do
+			part.Color = color
+		end
+	end
+end
+
+-- Blizzard on or off (MonetizationService, 6.2). Elves change speed and sight at once.
+function GuardService:SetBlizzard(on: boolean)
+	if blizzardOn == on then
+		return
+	end
+	blizzardOn = on
+	for _, elf in elves do
+		if elf.model.Parent then
+			elf.humanoid.WalkSpeed = if elf.state == "Chase" then chaseSpeedOf(elf) else patrolSpeed()
+		end
+	end
+	redrawCones()
 end
 
 function GuardService:Init()

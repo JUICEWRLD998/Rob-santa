@@ -177,6 +177,9 @@ local Config = {
 		-- ServerStorage/DebugData (a BindableFunction) lets Claude's Studio tests read a player's
 		-- save and set a field in it. Server-only: players can never reach ServerStorage.
 		DataHookInStudio = true,
+		-- ServerStorage/DebugMonetization (BindableFunction, step 6.2): Claude's Studio tests can
+		-- give a pass or run a fake receipt through the real purchase code. Studio only.
+		MonetizationHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -305,21 +308,41 @@ local Config = {
 		PageNeedsAllMutations = false,
 	},
 
-	-- Section 10: Robux. Prices are display/reference only; IDs are added in Phase 6.
+	-- Section 10: Robux (step 6.2). `id` = the pass / product ID from Creator Hub (created by the
+	-- owner in 6.1; 0 = not created yet, so it is not sold). `price` is only a fallback for the store
+	-- screen: the real price is whatever Creator Hub says, read live (GetProductInfoAsync).
+	-- Changing a price happens in Creator Hub, never here.
 	GamePasses = {
-		Vip = { price = 199, coinMultiplier = 2 },
-		BigSack = { price = 299 },
-		SpeedBoots = { price = 149, extraWalkSpeed = 4 },
-		WrapMaster = { price = 99, extraWraps = 2, cooldownReductionSeconds = 4 },
+		Vip = { id = 2096410164, price = 199, coinMultiplier = 2 }, -- also the 4 h offline cap (Offline.MaxHoursVip)
+		BigSack = { id = 2093346188, price = 299 }, -- carry Presents.CarryCapacityBigSack
+		SpeedBoots = { id = 2093820219, price = 149, extraWalkSpeed = 4 },
+		WrapMaster = { id = 2092740170, price = 99, extraWraps = 2, cooldownReductionSeconds = 4 },
 	},
 	DevProducts = {
-		BailOut = { price = 15 },
-		LuckyWrap = { price = 39 }, -- paid random item: show odds, check PolicyService
-		Blizzard = { price = 99, durationSeconds = 60, elfVisionMultiplier = 0.5 },
-		CoinPackSmall = { price = 25 },
-		CoinPackMedium = { price = 99 },
-		CoinPackLarge = { price = 299 },
-		AdventCatchUp = { price = 19 },
+		BailOut = { id = 3734661198, price = 15 },
+		LuckyWrap = { id = 3734661911, price = 39 }, -- paid random item: odds on screen, PolicyService check
+		Blizzard = {
+			id = 3734662463,
+			price = 99,
+			durationSeconds = 60, -- buying again while one runs adds another 60 s
+			elfVisionMultiplier = 0.5,
+			elfSpeedMultiplier = 0.75, -- (my pick) "slowed": chase 13-17 becomes about 10-13
+			snowMultiplier = 5, -- (my pick) snowflakes per second on every screen, x this
+		},
+		-- Coin packs grow with the player (my pick, so a pack is still worth buying late in the
+		-- game): incomeSeconds of the buyer's current income per second, but never less than
+		-- minCoins. Bigger packs give more per Robux.
+		CoinPackSmall = { id = 3734662915, price = 25, incomeSeconds = 5 * 60, minCoins = 1000 },
+		CoinPackMedium = { id = 3734663330, price = 99, incomeSeconds = 25 * 60, minCoins = 5000 },
+		CoinPackLarge = { id = 3734663722, price = 299, incomeSeconds = 90 * 60, minCoins = 20000 },
+		AdventCatchUp = { id = 3734667673, price = 19 }, -- sold from the Advent board in 6.3; until then a receipt stays unprocessed
+	},
+	Store = {
+		PassCheckRetries = 3, -- (my pick) UserOwnsGamePassAsync attempts per pass on join
+		PassesWaitSeconds = 10, -- (my pick) offline earnings wait this long for the VIP check
+		ReceiptSaveWaitSeconds = 30, -- (my pick) a purchase is confirmed only once it is saved
+		RequestCooldownSeconds = 0.5, -- (my pick) rate limit on RequestBailOut
+		VipTagColor = Color3.fromRGB(255, 205, 60),
 	},
 
 	-- Section 11: reasons to come back.

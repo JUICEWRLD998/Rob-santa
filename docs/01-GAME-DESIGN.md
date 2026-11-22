@@ -229,6 +229,15 @@ Rule: **free players must have a complete, fair game.** Paid items save time or 
 
 Server-wide purchases like Blizzard work well on Roblox: one player pays, the whole server cheers, and the buyer gets public credit.
 
+How each one works (step 6.2; the prices in the tables above were the starting plan, and the store shows whatever price is set in Creator Hub):
+- **VIP** doubles shelf income (online and offline) and toy sale prices. The gold `[VIP] name` tag replaces the normal name, and it hides while the VIP is a gift box.
+- **Bail Out** is sold only on the jail panel. If it arrives after the player is already free, it is saved as a free Bail Out, and the jail panel offers it next time.
+- **Lucky Wrap** is saved until the next unwrap. A Mythic present can't go higher, so it keeps the wrap.
+- **Blizzard:** elves move at 0.75× speed and see half as far (their vision cones shrink). Snow falls 5× heavier. Buying again while one blows adds 60 s.
+- **Coin packs** pay the buyer's current shelf income for 5 / 25 / 90 minutes, with minimums of 1,000 / 5,000 / 20,000 coins. The amount is rounded, and the store card shows it before buying.
+- **Advent catch-up** is not sold until step 6.3.
+- Every developer product is granted once per purchase. The purchase ID is saved with the grant before Roblox is told it went through.
+
 **Lucky Wrap is a paid random item** (Robux changes a random roll). Roblox rules: show the odds on the purchase screen before buying, and hide the product for players in places where paid random items are restricted (the game checks this automatically through PolicyService).
 
 Also: **private servers** at a small monthly price (set in Phase 8).
