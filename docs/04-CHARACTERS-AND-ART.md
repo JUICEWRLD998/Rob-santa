@@ -104,6 +104,10 @@ Some free models hide **malicious scripts** (backdoors that let strangers contro
 - Mutations are visual layers on top of the same mesh (tint, material, outline, light), so 16 meshes give you 80 looks.
 - Present wrappings: one present model with **colour/pattern per rarity** (Common = brown paper, Uncommon = green, Rare = blue, Epic = purple, Legendary = gold, Mythic = animated rainbow ribbon).
 
+What was built in step 5.4:
+- **16 toy meshes**, made with the MCP `generate_mesh` (one textured MeshPart each, 2,000–3,000 triangles, sized so the longest side is 1.8 studs). They live in `ServerStorage/ToyMeshes/<toy id>`; the `Source` attribute holds the prompt each one came from. `Lib/ToyModel` puts the mesh on the toy. Mutations take the texture off and paint the whole shape: Frosted ice, Gingerbread brown with a white icing outline, Glowing neon, Golden foil. A toy with no mesh still falls back to the old coloured ball.
+- **Wrapping per rarity** (`Config.Wrapping`): Common is kraft cardboard with fabric twine, Uncommon green fabric, Rare smooth blue, Epic purple foil, Legendary gold foil with sparkles, and Mythic pink foil with sparkles and a neon ribbon. The ribbon cycles through the rainbow on each player's screen (`PresentFxController`). Mythic presents only spawn from Update 1 (zones 4–5).
+
 ---
 
 ## 5. The look (art direction)

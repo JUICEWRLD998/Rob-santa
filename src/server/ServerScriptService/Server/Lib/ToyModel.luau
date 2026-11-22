@@ -1,10 +1,15 @@
 --!strict
--- Builds the placeholder model for one toy from ServerStorage/Templates/Toy: rarity colour,
--- mutation look, and the name/rarity tag. Used for toys on the unwrap table and on shelves.
--- PLACEHOLDER toy shape until Phase 5 (real toy meshes). The mutation looks (step 4.3) follow
--- docs/01 section 6 "Look" column and are layers on top of the toy, so they carry over to meshes:
+-- Builds the model for one toy: the toy's mesh, mutation look, and the name/rarity tag. Used for
+-- toys on the unwrap table and on shelves.
+-- Step 5.4: each toy has a generated mesh in ServerStorage/ToyMeshes/<toy id> (place file): a Model
+-- whose parts are centred on the origin, with a BoxSize attribute (its bounding box). The
+-- template's Body becomes an invisible box of that size, so the tag and the prompt sit on it and
+-- callers that stand the toy on a shelf by Body.Size keep working. A toy with no mesh falls back
+-- to the old placeholder ball in its rarity colour.
+-- Mutation looks (docs/01 section 6 "Look" column) are layers on top of the toy. On a mesh, the
+-- texture comes off and the whole silhouette takes the mutation's material:
 --   Frosted      icy blue Ice + drifting sparkles
---   Gingerbread  brown, with a white icing cap on top (a part; Phase 5 may swap it for a texture)
+--   Gingerbread  brown, with white icing trim (an outline on a mesh, a cap on the placeholder)
 --   Glowing      Neon in the rarity colour + outline (Highlight) + soft light
 --   Golden       gold Foil, shiny + a warm glint and slow twinkles
 
@@ -16,6 +21,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 
 -- Built-in sparkle texture (ships with the client, so no upload is needed).
 local SPARKLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local MESH_FOLDER = "ToyMeshes"
 
 local FROST_COLOR = Color3.fromRGB(170, 225, 255)
 local GINGER_COLOR = Color3.fromRGB(150, 90, 45)
@@ -35,6 +41,15 @@ local function template(): Model?
 	local templates = ServerStorage:FindFirstChild("Templates")
 	local found = templates and templates:FindFirstChild("Toy")
 	if found and found:IsA("Model") and found.PrimaryPart then
+		return found
+	end
+	return nil
+end
+
+local function meshFor(toyId: string): Model?
+	local folder = ServerStorage:FindFirstChild(MESH_FOLDER)
+	local found = folder and folder:FindFirstChild(toyId)
+	if found and found:IsA("Model") and typeof(found:GetAttribute("BoxSize")) == "Vector3" then
 		return found
 	end
 	return nil
@@ -67,22 +82,30 @@ local function light(body: BasePart, color: Color3, range: number, brightness: n
 	pointLight.Parent = body
 end
 
--- White icing on top of the body, welded so it moves with the toy. On a round body it is a
--- disc where the sphere is still wide (ICING_BALL_HEIGHT of the radius up); on a box, a slab.
+-- An outline around the whole toy. Highlights: max 255 shown per client (docs); only Glowing (2%)
+-- and Gingerbread meshes (5%) use one, far below that.
+local function outline(model: Model, color: Color3, name: string)
+	local highlight = Instance.new("Highlight")
+	highlight.Name = name
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = color
+	highlight.OutlineTransparency = 0
+	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+	highlight.Adornee = model
+	highlight.Parent = model
+end
+
+-- White icing on top of the placeholder ball, welded so it moves with the toy: a disc where the
+-- sphere is still wide (ICING_BALL_HEIGHT of the radius up).
 local function icingCap(model: Model, body: BasePart)
 	local icing = Instance.new("Part")
 	icing.Name = "Icing"
-	if body:IsA("Part") and body.Shape == Enum.PartType.Ball then
-		local radius = body.Size.X / 2
-		local height = radius * ICING_BALL_HEIGHT
-		local width = 2 * math.sqrt(radius * radius - height * height) + ICING_OVERHANG * 2
-		icing.Shape = Enum.PartType.Cylinder -- a cylinder's axis is X: turn it upright below
-		icing.Size = Vector3.new(ICING_THICKNESS, width, width)
-		icing.CFrame = body.CFrame * CFrame.new(0, height, 0) * CFrame.Angles(0, 0, math.rad(90))
-	else
-		icing.Size = Vector3.new(body.Size.X + ICING_OVERHANG * 2, ICING_THICKNESS, body.Size.Z + ICING_OVERHANG * 2)
-		icing.CFrame = body.CFrame * CFrame.new(0, body.Size.Y / 2 - ICING_THICKNESS / 2 + 0.01, 0)
-	end
+	local radius = body.Size.X / 2
+	local height = radius * ICING_BALL_HEIGHT
+	local width = 2 * math.sqrt(radius * radius - height * height) + ICING_OVERHANG * 2
+	icing.Shape = Enum.PartType.Cylinder -- a cylinder's axis is X: turn it upright below
+	icing.Size = Vector3.new(ICING_THICKNESS, width, width)
+	icing.CFrame = body.CFrame * CFrame.new(0, height, 0) * CFrame.Angles(0, 0, math.rad(90))
 	icing.Color = ICING_COLOR
 	icing.Material = Enum.Material.SmoothPlastic
 	icing.Anchored = body.Anchored
@@ -97,34 +120,72 @@ local function icingCap(model: Model, body: BasePart)
 	icing.Parent = model
 end
 
-local function applyMutation(model: Model, body: BasePart, mutation: Types.Mutation, rarityColor: Color3)
+-- Paints every visible part of the toy in one material (a mesh loses its texture first, or the
+-- texture would hide the colour).
+local function paint(visuals: { BasePart }, color: Color3, material: Enum.Material, reflectance: number?)
+	for _, part in visuals do
+		if part:IsA("MeshPart") then
+			part.TextureID = ""
+		end
+		part.Color = color
+		part.Material = material
+		part.Reflectance = reflectance or 0
+	end
+end
+
+-- `body` carries the effects (sparkles, light); `visuals` are the parts you see.
+local function applyMutation(model: Model, body: BasePart, visuals: { BasePart }, isMesh: boolean, mutation: Types.Mutation, rarityColor: Color3)
 	if mutation == "Frosted" then
-		body.Color = FROST_COLOR
-		body.Material = Enum.Material.Ice
+		paint(visuals, FROST_COLOR, Enum.Material.Ice)
 		sparkles(body, Color3.fromRGB(220, 240, 255), 5, 0.35)
 	elseif mutation == "Gingerbread" then
-		body.Color = GINGER_COLOR
-		body.Material = Enum.Material.Sand
-		icingCap(model, body)
+		paint(visuals, GINGER_COLOR, Enum.Material.Sand)
+		if isMesh then
+			outline(model, ICING_COLOR, "IcingTrim")
+		else
+			icingCap(model, body)
+		end
 	elseif mutation == "Glowing" then
-		body.Material = Enum.Material.Neon -- keeps the rarity colour
+		paint(visuals, rarityColor, Enum.Material.Neon)
 		light(body, rarityColor, GLOW_RANGE, 1.5)
-		-- Highlight: max 255 shown per client (docs); Glowing is 2% of toys, so far below that.
-		local outline = Instance.new("Highlight")
-		outline.Name = "MutationOutline"
-		outline.FillTransparency = 1
-		outline.OutlineColor = rarityColor:Lerp(Color3.new(1, 1, 1), GLOW_OUTLINE_WHITE)
-		outline.OutlineTransparency = 0
-		outline.DepthMode = Enum.HighlightDepthMode.Occluded
-		outline.Adornee = model
-		outline.Parent = model
+		outline(model, rarityColor:Lerp(Color3.new(1, 1, 1), GLOW_OUTLINE_WHITE), "MutationOutline")
 	elseif mutation == "Golden" then
-		body.Color = GOLD_COLOR
-		body.Material = Enum.Material.Foil
-		body.Reflectance = GOLD_REFLECTANCE
+		paint(visuals, GOLD_COLOR, Enum.Material.Foil, GOLD_REFLECTANCE)
 		light(body, Color3.fromRGB(255, 210, 120), 6, 0.8)
 		sparkles(body, Color3.fromRGB(255, 230, 150), 1.5, 0.5)
 	end
+end
+
+-- Puts the toy's mesh parts around `body` (welded, same anchoring) and turns body into an
+-- invisible box the mesh's size. Returns the mesh parts.
+local function attachMesh(model: Model, body: BasePart, mesh: Model): { BasePart }
+	local parts: { BasePart } = {}
+	if body:IsA("Part") then
+		body.Shape = Enum.PartType.Block
+	end
+	body.Size = mesh:GetAttribute("BoxSize") :: Vector3
+	body.Transparency = 1
+	for _, source in mesh:GetDescendants() do
+		if source:IsA("BasePart") then
+			local part = source:Clone()
+			part:ClearAllChildren() -- no stray welds or scripts from the source
+			part.CFrame = body.CFrame * source.CFrame -- source parts are laid out around the origin
+			part.Anchored = body.Anchored
+			part.CanCollide = false
+			part.CanQuery = false
+			part.CanTouch = false
+			part.Massless = true
+			if not body.Anchored then
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = body
+				weld.Part1 = part
+				weld.Parent = part
+			end
+			part.Parent = model
+			table.insert(parts, part)
+		end
+	end
+	return parts
 end
 
 -- True if the template exists. Services call this in Init to warn early.
@@ -145,9 +206,16 @@ function ToyModel.build(toy: Types.ToyDef, mutation: Types.Mutation?): Model?
 		return nil
 	end
 	local rarityColor = Config.Rarities[toy.rarity].color
-	body.Color = rarityColor
+	local mesh = meshFor(toy.id)
+	local visuals: { BasePart }
+	if mesh then
+		visuals = attachMesh(model, body, mesh)
+	else
+		body.Color = rarityColor -- placeholder ball
+		visuals = { body }
+	end
 	if mutation then
-		applyMutation(model, body, mutation, rarityColor)
+		applyMutation(model, body, visuals, mesh ~= nil, mutation, rarityColor)
 		model:SetAttribute("Mutation", mutation)
 	end
 	local nameLabel = body:FindFirstChild("ToyName", true)

@@ -39,6 +39,20 @@ local Config = {
 		Mythic = { incomePerSecond = 1000, sellPrice = 45000, carrySlowdown = 5, grabHoldSeconds = 2.0, color = Color3.fromRGB(255, 80, 160), ribbonColor = Color3.fromRGB(255, 255, 255) },
 	} :: { [Types.Rarity]: Types.RarityDef },
 
+	-- Step 5.4: present wrapping per rarity (docs/04 section 4). Paper colour = Rarities[r].color,
+	-- ribbon colour = Rarities[r].ribbonColor; this adds the materials and the extras.
+	-- sparkles = particles per second off the box (0 = none). rainbowRibbon: the ribbon cycles
+	-- through the rainbow every rainbowSeconds (each client animates it, the server doesn't).
+	Wrapping = {
+		Common = { paper = Enum.Material.Cardboard, ribbon = Enum.Material.Fabric, reflectance = 0, sparkles = 0 }, -- brown kraft paper, twine
+		Uncommon = { paper = Enum.Material.Fabric, ribbon = Enum.Material.SmoothPlastic, reflectance = 0, sparkles = 0 },
+		Rare = { paper = Enum.Material.SmoothPlastic, ribbon = Enum.Material.SmoothPlastic, reflectance = 0.05, sparkles = 0 },
+		Epic = { paper = Enum.Material.Foil, ribbon = Enum.Material.SmoothPlastic, reflectance = 0.1, sparkles = 0 },
+		Legendary = { paper = Enum.Material.Foil, ribbon = Enum.Material.SmoothPlastic, reflectance = 0.2, sparkles = 2 },
+		Mythic = { paper = Enum.Material.Foil, ribbon = Enum.Material.Neon, reflectance = 0.15, sparkles = 4, rainbowRibbon = true },
+		RainbowSeconds = 3, -- (my pick) one full trip round the colour wheel
+	},
+
 	-- Section 6: mutations, rolled at unwrap, at most one. Chance is a fraction (0.1 = 10%).
 	-- color (my pick, step 4.3): the mutation stamp on the reveal card. Toy looks: Lib/ToyModel.
 	Mutations = {
