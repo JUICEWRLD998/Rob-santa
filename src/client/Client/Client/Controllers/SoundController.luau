@@ -277,6 +277,26 @@ function SoundController:Start()
 
 	Remotes.get("DisguiseUpdate").OnClientEvent:Connect(onDisguise)
 
+	-- Sleigh Raid (6.4): a bright chime as the warning starts, a second one as it lands.
+	workspace:GetAttributeChangedSignal("SleighRaidState"):Connect(function()
+		local raid = workspace:GetAttribute("SleighRaidState")
+		if raid == "Warning" then
+			play("Chime", nil, 1.2)
+			task.delay(0.25, play, "Chime", nil, 1.5)
+		elseif raid == "Active" then
+			play("Chime", nil, 0.9)
+		end
+	end)
+
+	-- Snowball (6.4): a whoosh as you throw (heard by you only; the other players see the ball).
+	Remotes.get("SnowballFx").OnClientEvent:Connect(function(from: any)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if typeof(from) == "Vector3" and root and root:IsA("BasePart") and (root.Position - from).Magnitude < 6 then
+			play("Fwip", nil, 1.3)
+		end
+	end)
+
 	lastCoins = numberAttribute("Coins")
 	player:GetAttributeChangedSignal("Coins"):Connect(onCoins)
 

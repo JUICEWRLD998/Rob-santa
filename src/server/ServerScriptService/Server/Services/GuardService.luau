@@ -9,6 +9,8 @@
 --   Disguise (step 3.4): patrollers ignore a still gift box; a chasing elf walks up and sniffs it.
 --   Step 3.5: Snowman Cameras (zone 2+) sweep and ring a bell: every patrolling elf in the zone
 --   runs to where it saw you for alarmChaseSeconds. Head Elf (zone 3): 1.3x, faster, sniffs 5 s.
+--   Step 6.4: Sleigh Raid elves (StartRaid/EndRaid) guard the Town Square for one raid; a snowball
+--   (StunElf) freezes an elf, blind, for Config.Upgrades.Snowball.elfStunSeconds and ends its chase.
 --
 -- The server owns elf physics (SetNetworkOwner(nil)) so every player sees the same elf in the same
 -- place. Elves sit in their own collision group so two elves never block each other.
@@ -42,8 +44,12 @@ local WALK_ANIMATION_BASE_SPEED = 12 -- walk cycle plays at WalkSpeed / this, so
 local CONE_PATROL_COLOR = Color3.fromRGB(255, 214, 64)
 local CONE_CHASE_COLOR = Color3.fromRGB(255, 72, 64)
 local CONE_THICKNESS = 0.05
+local STUN_WORDS = "*brrr!*" -- over a snowballed elf's head (6.4)
 
 type Route = { BasePart } -- waypoints sorted by their Index attribute
+-- What an elf sees and how fast it runs: its zone's Config.Guards.ByZone entry, or the Sleigh Raid's.
+type ElfSettings = { visionRange: number, visionAngle: number, chaseSpeed: number }
+local RAID_ZONE = 0 -- Sleigh Raid elves (6.4) guard the Town Square: its SafeZone box is their "zone"
 type State = "Patrol" | "Chase"
 type ActionName = "ElfLookAround" | "ElfSniff" | "ElfShrug" | "ElfGrab"
 local ACTION_NAMES: { ActionName } = { "ElfLookAround", "ElfSniff", "ElfShrug", "ElfGrab" }
@@ -68,6 +74,8 @@ type Elf = {
 	inspectSeconds: number,
 	alarmPosition: Vector3?, -- set by a Snowman Camera bell: chase starts toward here
 	actions: { [ActionName]: AnimationTrack }, -- step 5.3 animations, loaded once per elf
+	settings: ElfSettings,
+	stunnedUntil: number, -- os.clock: a snowball hit (6.4) freezes it, blind, until then
 }
 
 -- Snowman Camera (step 3.5): stands still, turns left and right, rings a bell when it sees you.
@@ -101,6 +109,9 @@ local function setChased(player: Player, delta: number)
 	end
 end
 local snowmen: { Snowman } = {}
+local elfTemplate: Model? = nil -- ServerStorage/Templates/ElfGuard, kept for Sleigh Raid elves
+local raidElves: { Elf } = {}
+local raidRouteFolder: Folder? = nil
 
 -- Blizzard (developer product, 6.2): while it blows, every elf and snowman sees only
 -- elfVisionMultiplier as far, and elves walk and run at elfSpeedMultiplier. MonetizationService
@@ -170,6 +181,11 @@ local function collectZoneAreas()
 		if instance:IsA("BasePart") and type(zone) == "number" then
 			zoneAreas[zone] = instance
 		end
+	end
+	-- Sleigh Raid elves (6.4) guard the Town Square, so the Town's SafeZone box is their room.
+	local town = CollectionService:GetTagged("SafeZone")[1]
+	if town and town:IsA("BasePart") then
+		zoneAreas[RAID_ZONE] = town
 	end
 end
 
@@ -352,8 +368,15 @@ local function addHeadElfHat(head: BasePart)
 	hat.Parent = head
 end
 
-local function spawnElf(template: Model, headTemplate: Model?, zone: number, route: Route, startIndex: number, isHead: boolean): Elf?
-	local settings = Config.Guards.ByZone[zone]
+local function spawnElf(
+	template: Model,
+	headTemplate: Model?,
+	zone: number,
+	route: Route,
+	startIndex: number,
+	isHead: boolean,
+	settings: ElfSettings
+): Elf?
 	local headSettings = Config.Guards.HeadElf
 	local model = (if isHead and headTemplate then headTemplate else template):Clone()
 	if isHead then
@@ -389,7 +412,7 @@ local function spawnElf(template: Model, headTemplate: Model?, zone: number, rou
 		addHeadElfHat(head)
 	end
 	model:SetAttribute("Zone", zone)
-	model.Name = if isHead then `HeadElf_Zone{zone}` else `Elf_Zone{zone}`
+	model.Name = if zone == RAID_ZONE then "Elf_SleighRaid" elseif isHead then `HeadElf_Zone{zone}` else `Elf_Zone{zone}`
 	model.Parent = folder
 	root:SetNetworkOwner(nil)
 	local actions = animate(humanoid)
@@ -417,6 +440,8 @@ local function spawnElf(template: Model, headTemplate: Model?, zone: number, rou
 		inspectSeconds = if isHead then headSettings.inspectSeconds else Config.Disguise.InspectSeconds,
 		alarmPosition = nil,
 		actions = actions,
+		settings = settings,
+		stunnedUntil = 0,
 	}
 end
 
@@ -489,7 +514,7 @@ end
 
 -- The nearest player this patrolling elf can see right now, if any.
 local function findVisiblePlayer(elf: Elf): Player?
-	local settings = Config.Guards.ByZone[elf.zone]
+	local settings = elf.settings
 	local now = os.clock()
 	local best: Player?, bestDistance = nil, math.huge
 	for _, player in Players:GetPlayers() do
@@ -522,10 +547,24 @@ end
 -- (it spotted someone). Returns true when it arrived.
 local followPath: (elf: Elf, target: Vector3) -> boolean
 
+local function isStunned(elf: Elf): boolean
+	return os.clock() < elf.stunnedUntil
+end
+
 local function walkTo(elf: Elf, target: Vector3, allowPath: boolean): boolean
 	local lastPosition = elf.root.Position
 	local lastProgressAt = os.clock()
 	while elf.model.Parent and elf.state == "Patrol" do
+		if isStunned(elf) then
+			-- Hit by a snowball (6.4): stand still until it wears off; standing isn't being stuck.
+			elf.humanoid:MoveTo(elf.root.Position)
+			while elf.model.Parent and isStunned(elf) do
+				task.wait(CHECK_SECONDS)
+			end
+			lastPosition = elf.root.Position
+			lastProgressAt = os.clock()
+			continue
+		end
 		if flatDistance(elf.root.Position, target) <= REACH_DISTANCE then
 			return true
 		end
@@ -733,7 +772,7 @@ end
 
 local function runChase(elf: Elf)
 	local guards = Config.Guards
-	local settings = guards.ByZone[elf.zone]
+	local settings = elf.settings
 	local player = elf.target
 	if player then
 		setChased(player, 1)
@@ -758,6 +797,9 @@ local function runChase(elf: Elf)
 		local target = liveTarget(player)
 		local now = os.clock()
 		if not target or now - startedAt > chaseLimit then
+			break
+		elseif isStunned(elf) then
+			lastWords = STUN_WORDS -- a snowball ends the chase; walkTo then waits the stun out
 			break
 		end
 		if DisguiseService:IsDisguised(player) then
@@ -862,7 +904,7 @@ local function soundAlarm(zone: number, player: Player, position: Vector3)
 	local now = os.clock()
 	for _, elf in elves do
 		local ignoredUntil = elf.ignoreUntil[player]
-		if elf.zone == zone and elf.state == "Patrol" and elf.model.Parent and not (ignoredUntil and now < ignoredUntil) then
+		if elf.zone == zone and elf.state == "Patrol" and elf.model.Parent and not isStunned(elf) and not (ignoredUntil and now < ignoredUntil) then
 			elf.alarmPosition = position
 			elf.target = player
 			elf.state = "Chase"
@@ -1068,7 +1110,7 @@ local function visionLoop()
 	while true do
 		task.wait(interval)
 		for _, elf in elves do
-			if elf.state == "Patrol" and elf.model.Parent then
+			if elf.state == "Patrol" and elf.model.Parent and not isStunned(elf) then
 				local player = findVisiblePlayer(elf)
 				if player then
 					elf.target = player
@@ -1096,7 +1138,7 @@ local function redrawCones()
 		if old then
 			old:Destroy()
 		end
-		local settings = Config.Guards.ByZone[elf.zone]
+		local settings = elf.settings
 		elf.cone = buildCone(elf.model, elf.root, elf.humanoid, settings.visionRange * visionScale(), settings.visionAngle)
 		setConeColor(elf, color)
 	end
@@ -1117,6 +1159,107 @@ local function redrawCones()
 end
 
 -- Blizzard on or off (MonetizationService, 6.2). Elves change speed and sight at once.
+-- Sleigh Raid (6.4): Config.SleighRaid.Elves elves walk an oval around `center` (the pad's top) and
+-- guard the whole Town Square until EndRaid. They are ordinary elves otherwise (Blizzard, disguise,
+-- jail, snowballs all apply).
+function GuardService:StartRaid(center: CFrame): number
+	local template = elfTemplate
+	if #raidElves > 0 or not template then
+		return 0
+	end
+	local raid = Config.SleighRaid
+	local routeFolder = Instance.new("Folder")
+	routeFolder.Name = "SleighRaidRoute"
+	routeFolder.Parent = folder
+	raidRouteFolder = routeFolder
+	local route: Route = {}
+	-- A route point inside something solid (the Town's Christmas tree stands south of the pad) can't
+	-- be reached: skip it. Checked at elf height, so the floor doesn't count.
+	local overlap = OverlapParams.new()
+	overlap.FilterType = Enum.RaycastFilterType.Exclude
+	overlap.FilterDescendantsInstances = { folder, Workspace:FindFirstChild("Presents") :: Instance }
+	overlap.RespectCanCollide = true
+	for i = 1, raid.ElfRoutePoints do
+		local angle = (i - 1) / raid.ElfRoutePoints * math.pi * 2
+		local spot = center * CFrame.new(math.cos(angle) * raid.ElfRouteStuds.x, 0, math.sin(angle) * raid.ElfRouteStuds.z)
+		if #Workspace:GetPartBoundsInBox(spot * CFrame.new(0, 3, 0), Vector3.new(4, 3, 4), overlap) > 0 then
+			continue
+		end
+		local point = Instance.new("Part")
+		point.Name = `RaidWaypoint{i}`
+		point.Anchored = true
+		point.CanCollide = false
+		point.CanQuery = false
+		point.CanTouch = false
+		point.Transparency = 1
+		point.Size = Vector3.new(1, 0.2, 1)
+		point.CFrame = spot
+		point.Parent = routeFolder
+		table.insert(route, point)
+	end
+	if #route < 2 then
+		warn("[GuardService] no room for a Sleigh Raid elf route round the pad")
+		return 0
+	end
+	for i = 1, raid.Elves do
+		local startIndex = math.floor((i - 1) * #route / raid.Elves) % #route + 1
+		local elf = spawnElf(template, nil, RAID_ZONE, route, startIndex, false, raid.Elf)
+		if elf then
+			table.insert(elves, elf)
+			table.insert(raidElves, elf)
+			task.spawn(run, elf)
+		end
+	end
+	return #raidElves
+end
+
+-- The sleigh leaves: its elves go with it (a chase in progress just ends).
+function GuardService:EndRaid()
+	for _, elf in raidElves do
+		local index = table.find(elves, elf)
+		if index then
+			table.remove(elves, index)
+		end
+		elf.model:Destroy()
+	end
+	table.clear(raidElves)
+	if raidRouteFolder then
+		raidRouteFolder:Destroy()
+		raidRouteFolder = nil
+	end
+end
+
+-- Snowballs (6.4): where every live elf stands, for SnowballService to pick a target from.
+function GuardService:GetElfRoots(): { BasePart }
+	local roots: { BasePart } = {}
+	for _, elf in elves do
+		if elf.model.Parent then
+			table.insert(roots, elf.root)
+		end
+	end
+	return roots
+end
+
+-- A snowball hit the elf whose root is `root`: it stops, can't see, and drops any chase for
+-- `seconds`. Returns false if that elf is gone.
+function GuardService:StunElf(root: BasePart, seconds: number): boolean
+	for _, elf in elves do
+		if elf.root == root and elf.model.Parent then
+			elf.stunnedUntil = math.max(elf.stunnedUntil, os.clock() + seconds)
+			elf.humanoid:MoveTo(elf.root.Position)
+			say(elf, STUN_WORDS)
+			task.delay(seconds, function()
+				local text = elf.alertText
+				if elf.alert and text and text.Text == STUN_WORDS and not isStunned(elf) and elf.state == "Patrol" then
+					elf.alert.Enabled = false
+				end
+			end)
+			return true
+		end
+	end
+	return false
+end
+
 function GuardService:SetBlizzard(on: boolean)
 	if blizzardOn == on then
 		return
@@ -1158,6 +1301,7 @@ function GuardService:Start()
 		warn("[GuardService] ServerStorage/Templates/ElfGuard is missing; no elves spawned")
 		return
 	end
+	elfTemplate = template
 	local headFound = templates and templates:FindFirstChild("HeadElf")
 	local headTemplate: Model? = if headFound and headFound:IsA("Model") then headFound else nil
 	for zone = 1, Config.LaunchZones do
@@ -1184,7 +1328,7 @@ function GuardService:Start()
 				local route = routeList[(i - 1) % #routeList + 1]
 				if route then
 					local startIndex = math.floor((i - 1) * #route / count) % #route + 1
-					local elf = spawnElf(template, headTemplate, zone, route, startIndex, i > regular)
+					local elf = spawnElf(template, headTemplate, zone, route, startIndex, i > regular, settings)
 					if elf then
 						table.insert(elves, elf)
 						task.spawn(run, elf)

@@ -183,6 +183,9 @@ local Config = {
 		-- ServerStorage/DebugDaily (BindableFunction, step 6.3): Claude's Studio tests can pretend
 		-- it is another UTC date (to open December doors in November) and re-check the day. Studio only.
 		DailyHookInStudio = true,
+		-- ServerStorage/DebugRaid (BindableFunction, step 6.4): "start" begins the 10 s warning now,
+		-- "end" ends a running raid. Studio only.
+		RaidHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -238,7 +241,18 @@ local Config = {
 		Boots = { speedPerLevel = 1.5, costs = { 300, 900, 2700, 8000, 24000, 72000 } },
 		ExtraWrap = { wrapsByLevel = { 3, 4 }, costs = { 1500, 15000 } },
 		QuietSteps = { visionReductionPerLevel = 0.10, costs = { 2000, 12000, 60000 } },
-		Snowball = { cost = 5000, elfStunSeconds = 3, cooldownSeconds = 8 },
+		Snowball = {
+			cost = 5000,
+			elfStunSeconds = 3,
+			cooldownSeconds = 8,
+			-- Step 6.4 (all my picks). You aim with the camera; the server picks the target: the
+			-- nearest elf, or player carrying a present, within range and inside the aim cone, with a
+			-- clear line. No target = a throw into the snow (it still uses the cooldown).
+			rangeStuds = 45,
+			aimAngle = 50, -- FULL cone width in degrees around where the camera looks
+			flightStudsPerSecond = 70, -- the hit lands after distance / this
+			rangeSlackStuds = 6, -- extra studs allowed when the hit lands (the target kept moving)
+		},
 	},
 
 	-- Section 8: Naughty Jail.
@@ -253,15 +267,32 @@ local Config = {
 
 	-- Section 9: social and events.
 	SleighRaid = {
-		IntervalSeconds = 12 * 60,
+		IntervalSeconds = 12 * 60, -- from one landing to the next
+		FirstRaidSeconds = 12 * 60, -- (my pick) after the server starts
 		WarningSeconds = 10,
 		DurationSeconds = 60,
 		Presents = 6, -- Rare or better
-		MinRarity = "Rare" :: Types.Rarity,
+		-- (my pick) percent per raid present, in RarityOrder (Common, Uncommon, Rare, Epic, Legendary, Mythic).
+		RarityWeights = { 0, 0, 55, 30, 12, 3 },
 		Elves = 3,
+		-- (my pick) raid elves: like a Zone 2 elf. They guard the Town Square only (its SafeZone box).
+		Elf = { visionRange = 30, visionAngle = 80, chaseSpeed = 14 },
+		PresentRingStuds = 12, -- (my pick) presents stand in a ring this far from the pad's centre
+		-- (my pick) raid elves walk an oval round the pad, this far out sideways (X) and front-to-back (Z);
+		-- the Town tree stands 22 studs south of the pad centre, so Z stays short of it.
+		ElfRouteStuds = { x = 24, z = 15 },
+		ElfRoutePoints = 8,
+		DescendSeconds = 3, -- (my pick) the sleigh flies down onto the pad during the warning's last seconds
+		FlyHeightStuds = 70, -- (my pick) where it flies in from and leaves to
 	},
 	MostWanted = {
-		BountyFraction = 0.10, -- paid by the game, never taken from the target
+		BountyFraction = 0.10, -- of the target's coins, paid by the game, never taken from the target
+		-- (my pick) one hunter earns a bounty on the same Most Wanted player at most this often, so
+		-- two friends can't farm bounties off each other.
+		BountyCooldownSeconds = 5 * 60,
+		RefreshSeconds = 3, -- (my pick) how often the richest player is re-checked
+		MinPlayersForOutline = 2, -- (my pick) alone in a server, nobody is hunting you: no red outline
+		OutlineColor = Color3.fromRGB(255, 50, 50),
 	},
 
 	-- docs/04 section 5 (step 5.1): light snowfall, drawn on each client above its own camera.

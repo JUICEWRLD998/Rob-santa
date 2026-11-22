@@ -21,6 +21,8 @@ local CAMERA_TWEEN = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirect
 local PULSE = TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 local TOUCH_BUTTON_SIZE = 90 -- pixels: "a big gift-box button on phone"
 local TOUCH_BUTTON_GAP = 14 -- pixels between the Wrap! button and the jump button
+local MAX_PLACE_RETRIES = 20 -- half-second tries to place the Wrap! button while the touch controls build
+local placeRetries = 0
 
 local DisguiseController = {}
 
@@ -151,6 +153,12 @@ local function placeTouchButton(touchGui: Instance)
 	end
 	local frame = button and button.Parent
 	if not button or not jump or not jump:IsA("GuiObject") or not frame or not frame:IsA("GuiObject") then
+		-- The action button can be missing for a moment while the touch controls build; on an iPad it
+		-- then stayed at the default spot, on top of the jump button (2026-11-22). Try again shortly.
+		placeRetries += 1
+		if placeRetries <= MAX_PLACE_RETRIES then
+			task.delay(0.5, placeTouchButton, touchGui)
+		end
 		return
 	end
 	local function place()

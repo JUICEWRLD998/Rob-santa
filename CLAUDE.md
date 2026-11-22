@@ -58,7 +58,8 @@ src/shared/  Config.luau (EVERY tunable number), Toys.luau (toy list), Remotes.l
 src/server/  Main.server.luau (requires each module in Services/ and calls :Init() then :Start())
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
-                        ShopService, EventService, MonetizationService, DailyService (6.3: Advent, streak, quests), TutorialService,
+                        ShopService, EventService, MonetizationService, DailyService (6.3: Advent, streak, quests),
+                        SleighRaidService, MostWantedService, SnowballService (6.4), TutorialService,
                         NpcService (5.3: idle loop on IdleNpc-tagged models), ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
                         IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
                         IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
@@ -71,7 +72,8 @@ src/client/  Main.local.luau (requires each module in Controllers/)
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
                            TutorialController, SoundController (5.6),
-                           StoreController and BlizzardController (6.2), DailyController (6.3)
+                           StoreController and BlizzardController (6.2), DailyController (6.3),
+                           SleighRaidController and SnowballController (6.4)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
 lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
 Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
@@ -85,7 +87,7 @@ Title, Coins, Status, Close, List/ItemTemplate), IndexGui (4.4: same panel; Bonu
 List/RowTemplate with Cells/CellTemplate; HudGui.IndexButton sits above ShopButton, clear of the phone
 thumbstick); controllers fill and animate them, they don't build them.
 5.5 skin: RevealGui is a full-screen stage (IgnoreGuiInset; Burst, Rays, Toy ViewportFrame, Card with
-Mutation/StampScale, Confetti/PieceTemplate, Flash). HUD layout (2026-11-22, the owner found the top bar crowded): every top button is 56 px. INDEX and SHOP are in the top-left column, DAILY and ROBUX in the top-right column. In the centre, Coins (176x44) and Wraps (96x44) form one pair; while jailed, JailGui.Panel (128x44: "Free in Ns" and "Mine coal c/n") takes the Wraps spot, with BailOutButton (88x44) beside it, and DAILY plus the Wrap! touch button hide. DontMove sits at y 0.55 so it clears the Wrap! button on small phones. Toast at y 58, Blizzard banner at y 94. Toy name tags on the unwrap table alternate height (ShelfService) so neighbours do not run together.
+Mutation/StampScale, Confetti/PieceTemplate, Flash). HUD layout (2026-11-22, the owner found the top bar crowded): every top button is 56 px. INDEX and SHOP are in the top-left column, DAILY and ROBUX in the top-right column. In the centre, Coins (176x44) and Wraps (96x44) form one pair; while jailed, JailGui.Panel (128x44: "Free in Ns" and "Mine coal c/n") takes the Wraps spot, with BailOutButton (88x44) beside it, and DAILY plus the Wrap! touch button hide. DontMove sits at y 0.55 so it clears the Wrap! button on small phones. RaidTimer (6.4) is a 56 px tile in the top-left column under SHOP, hidden except during the raid warning ("SLEIGH 7s", orange) and the raid ("RAID 0:42", red); the owner found a centre banner and then a centre pill covered the phone screen, so nothing about the raid goes in the centre and there is no raid toast. Toast at y 58, Blizzard banner at y 94. On phone the bottom-right row is Snow (56 px), Wrap! (90 px), Jump; the Snow button follows the Wrap! button (SnowballController). Toy name tags on the unwrap table alternate height (ShelfService) so neighbours do not run together.
 Shop and Index panels are `UDim2.new(1,-230,0.82,0)` wide (max 620), leaving 115 px clear on each side for
 the thumbstick and jump button. Every ScreenGui uses ZIndexBehavior Global, and each DropShadow sits at its
 parent's ZIndex - 1. Numbers use Luckiest Guy; everything else uses Fredoka One.
@@ -132,6 +134,21 @@ longer between them, or some are dropped without an error.
 **`user_mouse_input` clicks missed the HUD with the phone emulator on** (2026-11-22, step 6.3): both the
 AbsolutePosition and the screenshot coordinates clicked nothing. For a screenshot of a panel, set it Visible
 from a Client `execute_luau`; the controller fills it on every sync even while it is closed.
+Sleigh Raid, Most Wanted, Snowball (6.4): SleighRaidService sets the Workspace attributes SleighRaidState
+("Waiting" | "Warning" | "Active"), SleighRaidLandsAt and SleighRaidEndsAt, flies ServerStorage/Templates/Sleigh
+(place file, parts, pivot at the bottom centre, nose to -Z) onto the SleighPad, and calls
+PresentService:SpawnRaidPresents/ClearRaidPresents (zone 0 = Town presents) and GuardService:StartRaid/EndRaid
+(raid elves use the SafeZone box as their zone; Elf.settings replaced the ByZone lookups). Test hook:
+`ServerStorage.DebugRaid:Invoke("start" | "end" | "state")`. MostWantedService fills the WantedGui SurfaceGui on
+the MostWantedBoard part and puts a Highlight (MostWantedOutline) in the character; Workspace attribute
+MostWantedUserId. SnowballService handles RequestSnowball(aim) and fires SnowballFx to everyone; it uses
+GuardService:GetElfRoots/StunElf and PresentService:KnockLoose. Dropped presents now carry a Steal prompt.
+**A SurfaceGui's MaxDistance seems to count from the character, not the camera** (2026-11-22, step 6.4): the
+poster stayed blank in a `screen_capture` taken from 17 studs while the character stood in its hideout. WantedGui
+uses MaxDistance 0. Remember this before reading a blank SurfaceGui in a screenshot as broken.
+**Testing raid elves or snowballs by teleporting next to an elf usually ends in jail** (the other elves see
+you). Test a snowball from 12 studs behind a lone Zone 1 elf, and wait 0.3 s after the teleport before
+firing, or the server still has the old position and the throw misses.
 Zone edges: each zone has a ZoneVolume part tagged ZoneArea; elves never chase past it.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
 Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and
