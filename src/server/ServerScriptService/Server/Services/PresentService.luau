@@ -86,8 +86,12 @@ local function rollRarity(zone: number): Types.Rarity
 	return Config.RarityOrder[1]
 end
 
-local function capacityOf(_player: Player): number
-	return Config.Presents.CarryCapacity -- Big Sack (Phase 6) raises this to CarryCapacityBigSack
+-- Big Sack (game pass, 6.2): MonetizationService sets the attribute.
+local function capacityOf(player: Player): number
+	if player:GetAttribute("Pass_BigSack") == true then
+		return Config.Presents.CarryCapacityBigSack
+	end
+	return Config.Presents.CarryCapacity
 end
 
 local function setPartsCarried(present: Present, carried: boolean)
@@ -552,6 +556,13 @@ function PresentService:ReturnCarried(player: Player)
 		returnToZone(present)
 	end
 	refreshCarrier(player)
+end
+
+-- Re-shows the carry capacity after it changed (Big Sack bought, 6.2).
+function PresentService:RefreshCapacity(player: Player)
+	if player.Parent then
+		refreshCarrier(player)
+	end
 end
 
 return PresentService

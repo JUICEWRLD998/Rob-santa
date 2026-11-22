@@ -39,6 +39,8 @@ export type PlayerData = {
 	lastLoginTime: number, -- os.time() of the latest join
 	lastSeen: number, -- os.time() of the latest save; offline earnings count from here
 	purchases: { [string]: boolean }, -- PurchaseIds already granted (Phase 6, ProcessReceipt)
+	luckyWraps: number, -- Lucky Wraps bought and not used yet (6.2): the next unwrap rolls higher
+	bailCredits: number, -- Bail Outs that arrived when the player was no longer jailed (6.2)
 }
 
 -- New players start with this. When a field is added later, Reconcile() fills it in for old saves.
@@ -57,6 +59,8 @@ local TEMPLATE: PlayerData = {
 	lastLoginTime = 0,
 	lastSeen = 0,
 	purchases = {},
+	luckyWraps = 0,
+	bailCredits = 0,
 }
 
 type Session = {
@@ -233,6 +237,39 @@ function DataService:TakeOfflineSeconds(player: Player): number
 	local seconds = session.offlineSeconds
 	session.offlineSeconds = 0
 	return seconds
+end
+
+-- A developer product purchase, granted exactly once (step 6.2; ProfileStore's receipt pattern).
+-- The PurchaseId is recorded in the save in the same moment `grant(data)` runs (no yield between),
+-- so a receipt Roblox delivers again is recognised and not granted twice. It answers "granted"
+-- only once a save that includes this PurchaseId has reached the DataStore: if the server stops
+-- before that, the grant and the record are lost together and Roblox delivers the receipt again.
+-- `grant` must not yield. Returns true = tell Roblox PurchaseGranted, false = NotProcessedYet.
+function DataService:ProcessPurchase(player: Player, purchaseId: string, grant: (data: PlayerData) -> ()): boolean
+	local session = sessions[player]
+	if not session then
+		return false
+	end
+	local profile = session.profile
+	local data = profile.Data :: PlayerData
+	if not data.purchases[purchaseId] then
+		-- Grant first: if it errors, nothing is recorded and the receipt is retried later.
+		grant(data)
+		data.purchases[purchaseId] = true
+	end
+	local function saved(): boolean
+		local last = profile.LastSavedData
+		return type(last) == "table" and type(last.purchases) == "table" and last.purchases[purchaseId] == true
+	end
+	if saved() then
+		return true
+	end
+	profile:Save()
+	local deadline = os.clock() + Config.Store.ReceiptSaveWaitSeconds
+	while not saved() and profile:IsActive() and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	return saved()
 end
 
 -- os.time() of the join before this one (0 for a new player). For the login streak in 6.3.

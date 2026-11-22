@@ -5,3 +5,5 @@ tools/types/
 # Generated
 sourcemap.json
 roblox.yml
+# Icon fonts, copied from the Roblox install by tools/icons/render.mjs
+tools/icons/fonts/

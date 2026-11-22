@@ -21,6 +21,7 @@ local PresentService = require(script.Parent.PresentService)
 
 local WRAPS_ATTRIBUTE = "Wraps" -- on the Player; the HUD reads it
 local EXTRA_WRAP_ATTRIBUTE = "Shop_ExtraWrap" -- ShopCatalog.attributeName("ExtraWrap")
+local WRAP_MASTER_ATTRIBUTE = "Pass_WrapMaster" -- StoreCatalog.passAttribute("WrapMaster")
 local DISGUISED_ATTRIBUTE = "Disguised" -- on the Player while wrapped
 local BOX_NAME = "DisguiseBox"
 local PRESENT_SIZE = 2 -- studs, a zone present's box (Templates/Present.Box)
@@ -59,14 +60,31 @@ local function send(player: Player, state: Types.DisguiseState, disguise: Disgui
 	update:FireClient(player, payload)
 end
 
--- Wraps per trip: the Extra Wrap level (ShopService sets the attribute), Wrap Master in Phase 6.
+local function hasWrapMaster(player: Player): boolean
+	return player:GetAttribute(WRAP_MASTER_ATTRIBUTE) == true
+end
+
+-- Wraps per trip: the Extra Wrap level (ShopService sets the attribute), plus the Wrap Master pass
+-- (MonetizationService sets that one, 6.2).
 local function maxWraps(player: Player): number
 	local level = player:GetAttribute(EXTRA_WRAP_ATTRIBUTE)
 	local byLevel = Config.Upgrades.ExtraWrap.wrapsByLevel
+	local wraps = Config.Disguise.WrapsPerTrip
 	if type(level) == "number" and level >= 1 then
-		return byLevel[math.min(level, #byLevel)]
+		wraps = byLevel[math.min(level, #byLevel)]
 	end
-	return Config.Disguise.WrapsPerTrip
+	if hasWrapMaster(player) then
+		wraps += Config.GamePasses.WrapMaster.extraWraps
+	end
+	return wraps
+end
+
+local function cooldownOf(player: Player): number
+	local seconds = Config.Disguise.CooldownSeconds
+	if hasWrapMaster(player) then
+		seconds -= Config.GamePasses.WrapMaster.cooldownReductionSeconds
+	end
+	return math.max(0, seconds)
 end
 
 local function wrapsOf(player: Player): number
@@ -171,7 +189,7 @@ local function finish(player: Player, state: Types.DisguiseState)
 		body.humanoid.DisplayDistanceType = disguise.displayType
 	end
 	disguise.box:Destroy()
-	readyAt[player] = os.clock() + Config.Disguise.CooldownSeconds
+	readyAt[player] = os.clock() + cooldownOf(player)
 	if player.Parent then
 		player:SetAttribute(DISGUISED_ATTRIBUTE, nil)
 		send(player, state, nil)

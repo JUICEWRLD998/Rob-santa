@@ -1,0 +1,373 @@
+<!doctype html>
+<!--
+  Store icons for the game passes and developer products (step 6.1, docs/01 section 10).
+  Drawn as SVG in the game's UI style (docs/04 section 5: thick navy outlines, a soft drop shadow,
+  Luckiest Guy for numbers, warm light on a navy night). render.mjs screenshots each one to
+  art/icons/<id>.png at 512x512. Open icons.html?id=sheet to see them all side by side.
+  Pass icons are shown in a circle on the Roblox store, so every subject stays inside the
+  central circle (radius ~230).
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Luckiest Guy"; src: url("fonts/LuckiestGuy-Regular.ttf"); }
+  @font-face { font-family: "Fredoka One"; src: url("fonts/FredokaOne-Regular.ttf"); }
+  html, body { margin: 0; padding: 0; background: #0d1330; }
+  svg { display: block; }
+  svg * { stroke-linejoin: round; stroke-linecap: round; }
+  .num { font-family: "Luckiest Guy"; paint-order: stroke; stroke: #1b1f3b; }
+  .sheet { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; }
+  .sheet figure { margin: 0; color: #dfe7ff; font: 16px "Fredoka One"; text-align: center; }
+  .sheet .round svg { clip-path: circle(50%); }
+  .small { display: flex; gap: 12px; padding: 0 16px 16px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2a8"/><stop offset=".45" stop-color="#ffc93c"/><stop offset="1" stop-color="#e58a17"/>
+    </linearGradient>
+    <linearGradient id="goldDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffbf3a"/><stop offset="1" stop-color="#c96f0f"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7a7a"/><stop offset=".5" stop-color="#e02f40"/><stop offset="1" stop-color="#a3172a"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ef08a"/><stop offset=".5" stop-color="#34b356"/><stop offset="1" stop-color="#1d7a3c"/>
+    </linearGradient>
+    <linearGradient id="pine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3fae62"/><stop offset="1" stop-color="#17663a"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8eefff"/><stop offset=".5" stop-color="#2cb8e3"/><stop offset="1" stop-color="#1a78b5"/>
+    </linearGradient>
+    <linearGradient id="white" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfdcf7"/>
+    </linearGradient>
+    <linearGradient id="cream" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8e6"/><stop offset="1" stop-color="#f2dcb0"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8592ad"/><stop offset=".4" stop-color="#dfe5f2"/><stop offset="1" stop-color="#6d7894"/>
+    </linearGradient>
+    <linearGradient id="burlap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0cf94"/><stop offset=".55" stop-color="#c38f52"/><stop offset="1" stop-color="#8c5c2f"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c98a4b"/><stop offset="1" stop-color="#7d4a22"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e7b3ff"/><stop offset=".5" stop-color="#ad5cf7"/><stop offset="1" stop-color="#6b2bc9"/>
+    </linearGradient>
+    <filter id="pop" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="3" flood-color="#060a1c" flood-opacity=".55"/>
+    </filter>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="14"/>
+    </filter>
+  </defs>
+</svg>
+<div id="root"></div>
+<script>
+const O = "#1b1f3b"; // outline navy
+const SW = 12;       // outline width
+const line = `stroke="${O}" stroke-width="${SW}"`;
+
+// Snow dots in the background, fixed so every render is identical.
+const SNOW = [[58,70,5],[140,40,3],[220,82,4],[330,46,5],[430,90,3],[470,190,4],[40,210,3],[92,300,4],
+  [466,330,5],[34,420,4],[120,470,3],[300,480,4],[420,460,3],[480,40,4],[250,30,3],[170,140,3]];
+
+function background(glow) {
+  const id = "bg" + glow.replace("#", "");
+  return `
+    <defs>
+      <radialGradient id="${id}" cx="50%" cy="46%" r="68%">
+        <stop offset="0" stop-color="${glow}"/>
+        <stop offset=".55" stop-color="#22306a"/>
+        <stop offset="1" stop-color="#0d1330"/>
+      </radialGradient>
+    </defs>
+    <rect width="512" height="512" fill="url(#${id})"/>
+    <circle cx="256" cy="250" r="150" fill="${glow}" opacity=".35" filter="url(#soft)"/>
+    ${SNOW.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity=".55"/>`).join("")}`;
+}
+
+function frame(glow, body) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    ${background(glow)}
+    <g filter="url(#pop)">${body}</g>
+  </svg>`;
+}
+
+// A white number with a thick navy outline, Luckiest Guy (the game's number font).
+function text(x, y, s, size, fill = "#fff") {
+  return `<text class="num" x="${x}" y="${y}" font-size="${size}" text-anchor="middle"
+    fill="${fill}" stroke-width="${Math.round(size / 5)}">${s}</text>`;
+}
+
+function badge(x, y, s, fill, size = 56) {
+  return `<circle cx="${x}" cy="${y}" r="58" fill="url(#${fill})" ${line}/>
+    <ellipse cx="${x - 18}" cy="${y - 26}" rx="18" ry="9" fill="#fff" opacity=".45" transform="rotate(-25 ${x - 18} ${y - 26})"/>
+    ${text(x, y + size * 0.36, s, size)}`;
+}
+
+function sparkle(x, y, r) {
+  const k = r * 0.28;
+  return `<path d="M${x} ${y - r} Q${x + k} ${y - k} ${x + r} ${y} Q${x + k} ${y + k} ${x} ${y + r}
+    Q${x - k} ${y + k} ${x - r} ${y} Q${x - k} ${y - k} ${x} ${y - r} Z" fill="#fff8d0" stroke="${O}" stroke-width="6"/>`;
+}
+
+function shine(x, y, rx, ry, angle) {
+  return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fff" opacity=".45" transform="rotate(${angle} ${x} ${y})"/>`;
+}
+
+// A present: box, lid, ribbon and bow. (x, y) = top-left of the lid.
+function present(x, y, w, h, box, ribbon) {
+  const lidH = Math.round(h * 0.28);
+  const cx = x + w / 2;
+  const rw = Math.round(w * 0.18);
+  return `
+    <path d="M${cx} ${y + 4} C${cx - w * 0.42} ${y - h * 0.42} ${cx - w * 0.5} ${y - h * 0.05} ${cx - 6} ${y + 2} Z" fill="url(#${ribbon})" ${line}/>
+    <path d="M${cx} ${y + 4} C${cx + w * 0.42} ${y - h * 0.42} ${cx + w * 0.5} ${y - h * 0.05} ${cx + 6} ${y + 2} Z" fill="url(#${ribbon})" ${line}/>
+    <rect x="${x + w * 0.06}" y="${y + lidH - 6}" width="${w * 0.88}" height="${h - lidH + 6}" rx="12" fill="url(#${box})" ${line}/>
+    <rect x="${cx - rw / 2}" y="${y + lidH}" width="${rw}" height="${h - lidH}" fill="url(#${ribbon})" ${line}/>
+    <rect x="${x}" y="${y}" width="${w}" height="${lidH}" rx="12" fill="url(#${box})" ${line}/>
+    <rect x="${cx - rw / 2}" y="${y}" width="${rw}" height="${lidH}" fill="url(#${ribbon})" ${line}/>
+    <circle cx="${cx}" cy="${y + 2}" r="${Math.round(w * 0.09)}" fill="url(#${ribbon})" ${line}/>
+    ${shine(x + w * 0.22, y + lidH * 0.45, w * 0.1, lidH * 0.18, -8)}`;
+}
+
+// A front-facing coin with a star stamp.
+function coin(x, y, r) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 === 0 ? r * 0.42 : r * 0.18;
+    pts.push(`${(x + rr * Math.cos(a)).toFixed(1)},${(y + rr * Math.sin(a)).toFixed(1)}`);
+  }
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#gold)" stroke="${O}" stroke-width="${Math.max(8, r * 0.13)}"/>
+    <circle cx="${x}" cy="${y}" r="${r * 0.72}" fill="none" stroke="#d98a12" stroke-width="${Math.max(4, r * 0.07)}"/>
+    <polygon points="${pts.join(" ")}" fill="#e89a1a"/>
+    ${shine(x - r * 0.38, y - r * 0.42, r * 0.22, r * 0.11, -35)}`;
+}
+
+// A flat coin seen from the side, for stacks. (x, y) = centre of its top face.
+function flatCoin(x, y, rx) {
+  const ry = rx * 0.34, t = rx * 0.24;
+  return `<path d="M${x - rx} ${y} L${x - rx} ${y + t} A${rx} ${ry} 0 0 0 ${x + rx} ${y + t} L${x + rx} ${y} Z" fill="url(#goldDark)" stroke="${O}" stroke-width="8"/>
+    <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="url(#gold)" stroke="${O}" stroke-width="8"/>
+    <ellipse cx="${x}" cy="${y}" rx="${rx * 0.62}" ry="${ry * 0.62}" fill="none" stroke="#d98a12" stroke-width="4"/>`;
+}
+
+function stack(x, baseY, count, rx) {
+  let s = "";
+  const step = rx * 0.24;
+  for (let i = 0; i < count; i++) s += flatCoin(x, baseY - i * step, rx);
+  return s;
+}
+
+const ICONS = {
+  // ---------------------------------------------------------------- game passes
+  vip: { name: "VIP", round: true, svg: () => frame("#ffb43a", `
+    <path d="M136 335 L112 178 L196 250 L256 132 L316 250 L400 178 L376 335 Z" fill="url(#gold)" ${line}/>
+    ${shine(184, 236, 12, 38, -18)}
+    <circle cx="112" cy="178" r="20" fill="url(#gold)" ${line}/>
+    <circle cx="256" cy="132" r="22" fill="url(#gold)" ${line}/>
+    <circle cx="400" cy="178" r="20" fill="url(#gold)" ${line}/>
+    <rect x="122" y="296" width="268" height="66" rx="18" fill="url(#goldDark)" ${line}/>
+    <circle cx="256" cy="329" r="19" fill="url(#red)" stroke="${O}" stroke-width="8"/>
+    <circle cx="184" cy="329" r="13" fill="url(#teal)" stroke="${O}" stroke-width="7"/>
+    <circle cx="328" cy="329" r="13" fill="url(#teal)" stroke="${O}" stroke-width="7"/>
+    <path d="M128 398 L78 404 L98 430 L80 458 L132 452 Z" fill="#a3172a" ${line}/>
+    <path d="M384 398 L434 404 L414 430 L432 458 L380 452 Z" fill="#a3172a" ${line}/>
+    <path d="M118 384 Q256 364 394 384 L394 450 Q256 430 118 450 Z" fill="url(#red)" ${line}/>
+    ${text(256, 437, "VIP", 70)}
+  `)},
+
+  bigsack: { name: "Big Sack", round: true, svg: () => frame("#3fd46a", `
+    <g transform="rotate(-12 214 190)">${present(160, 150, 108, 104, "red", "green")}</g>
+    <g transform="rotate(11 306 176)">${present(252, 128, 112, 116, "teal", "gold")}</g>
+    <path d="M166 236 Q124 262 112 334 Q98 436 204 448 L308 448 Q414 436 400 334 Q388 262 346 236 Q256 222 166 236 Z" fill="url(#burlap)" ${line}/>
+    <path d="M150 238 Q256 280 362 238 L370 268 Q256 316 142 268 Z" fill="#a8743f" ${line}/>
+    ${shine(168, 330, 16, 44, 12)}
+    <polygon points="256,330 270,362 304,364 278,386 287,419 256,401 225,419 234,386 208,364 242,362" fill="url(#gold)" stroke="${O}" stroke-width="8"/>
+    ${badge(400, 384, "x2", "red", 50)}
+  `)},
+
+  speedboots: { name: "Speed Boots", round: true, svg: () => frame("#3aa8ff", `
+    <g fill="none" stroke="#e8f4ff" stroke-width="18" opacity=".85">
+      <path d="M70 214 L150 214"/><path d="M44 280 L148 280"/><path d="M78 346 L150 346"/>
+    </g>
+    <path d="M190 170 L300 170 L300 298 Q300 318 320 322 L378 332 Q408 336 418 314 Q426 292 450 294 Q472 298 466 326 Q454 386 390 402 L212 406 Q190 406 190 384 Z" fill="url(#red)" ${line}/>
+    <path d="M196 372 L396 372 Q430 364 446 346 Q456 380 390 402 L212 406 Q196 406 196 390 Z" fill="#3a1d16" ${line}/>
+    <rect x="190" y="250" width="110" height="30" fill="url(#pine)" ${line}/>
+    <rect x="228" y="244" width="36" height="42" rx="6" fill="none" stroke="url(#gold)" stroke-width="10"/>
+    ${shine(214, 228, 10, 28, 0)}
+    <rect x="174" y="132" width="142" height="54" rx="27" fill="url(#white)" ${line}/>
+    <circle cx="462" cy="292" r="20" fill="url(#gold)" ${line}/>
+    ${badge(384, 136, "+4", "teal", 54)}
+  `)},
+
+  wrapmaster: { name: "Wrap Master", round: true, svg: () => frame("#ff4f8b", `
+    <rect x="136" y="282" width="240" height="150" rx="14" fill="url(#teal)" ${line}/>
+    <rect x="236" y="282" width="40" height="150" fill="url(#gold)" ${line}/>
+    <rect x="144" y="246" width="224" height="40" rx="8" fill="#0d1330" ${line}/>
+    <ellipse cx="226" cy="266" rx="17" ry="13" fill="#fff"/>
+    <ellipse cx="290" cy="266" rx="17" ry="13" fill="#fff"/>
+    <circle cx="233" cy="268" r="7" fill="${O}"/>
+    <circle cx="297" cy="268" r="7" fill="${O}"/>
+    <path d="M256 196 C196 120 150 168 192 198 Z" fill="url(#gold)" ${line}/>
+    <path d="M256 196 C316 120 362 168 320 198 Z" fill="url(#gold)" ${line}/>
+    <rect x="120" y="194" width="272" height="56" rx="14" fill="url(#teal)" ${line}/>
+    <rect x="236" y="194" width="40" height="56" fill="url(#gold)" ${line}/>
+    <circle cx="256" cy="194" r="20" fill="url(#gold)" ${line}/>
+    ${shine(164, 214, 22, 8, -6)}
+    ${sparkle(104, 170, 26)}${sparkle(116, 380, 18)}
+    ${badge(398, 372, "+2", "red", 54)}
+  `)},
+
+  // ---------------------------------------------------------------- developer products
+  bailout: { name: "Bail Out", round: false, svg: () => frame("#ff9a3c", `
+    <rect x="126" y="140" width="260" height="250" rx="10" fill="#0d1330" opacity=".55"/>
+    <g fill="none">
+      <path d="M160 150 L160 380" stroke="${O}" stroke-width="40"/>
+      <path d="M352 150 L352 380" stroke="${O}" stroke-width="40"/>
+      <path d="M216 150 Q168 265 216 380" stroke="${O}" stroke-width="40"/>
+      <path d="M296 150 Q344 265 296 380" stroke="${O}" stroke-width="40"/>
+      <path d="M160 150 L160 380" stroke="#c4cce0" stroke-width="26"/>
+      <path d="M352 150 L352 380" stroke="#c4cce0" stroke-width="26"/>
+      <path d="M154 160 L154 370" stroke="#eef2fa" stroke-width="7"/>
+      <path d="M346 160 L346 370" stroke="#eef2fa" stroke-width="7"/>
+      <path d="M216 150 Q168 265 216 380" stroke="#c4cce0" stroke-width="26"/>
+      <path d="M296 150 Q344 265 296 380" stroke="#c4cce0" stroke-width="26"/>
+    </g>
+    <rect x="114" y="118" width="284" height="40" rx="14" fill="url(#steel)" ${line}/>
+    <rect x="114" y="372" width="284" height="40" rx="14" fill="url(#steel)" ${line}/>
+    <g transform="translate(196 318) rotate(-32)">
+      <rect x="34" y="-15" width="160" height="30" rx="8" fill="url(#gold)" ${line}/>
+      <rect x="150" y="10" width="22" height="34" rx="4" fill="url(#gold)" ${line}/>
+      <rect x="116" y="10" width="20" height="26" rx="4" fill="url(#gold)" ${line}/>
+      <path fill-rule="evenodd" d="M0 -50 A50 50 0 1 1 0 50 A50 50 0 1 1 0 -50 Z M0 -20 A20 20 0 1 0 0 20 A20 20 0 1 0 0 -20 Z" fill="url(#gold)" ${line}/>
+      ${shine(-20, -24, 14, 7, -30)}
+    </g>
+    ${sparkle(400, 112, 22)}${sparkle(98, 420, 16)}
+  `)},
+
+  luckywrap: { name: "Lucky Wrap", round: false, svg: () => frame("#b65cff", `
+    <g fill="none" stroke-width="20">
+      <path d="M136 370 A120 120 0 0 1 376 370" stroke="${O}" stroke-width="114"/>
+      <path d="M96 370 A160 160 0 0 1 416 370" stroke="#ff4d5e"/>
+      <path d="M116 370 A140 140 0 0 1 396 370" stroke="#ffa23a"/>
+      <path d="M136 370 A120 120 0 0 1 376 370" stroke="#ffe14d"/>
+      <path d="M156 370 A100 100 0 0 1 356 370" stroke="#4fd66a"/>
+      <path d="M176 370 A80 80 0 0 1 336 370" stroke="#4fb6ff"/>
+    </g>
+    ${present(150, 250, 196, 172, "red", "gold")}
+    ${sparkle(110, 150, 24)}${sparkle(402, 128, 18)}
+    <circle cx="390" cy="378" r="62" fill="url(#green)" ${line}/>
+    ${shine(372, 350, 18, 9, -25)}
+    <path d="M390 336 L428 376 L406 376 L406 414 L374 414 L374 376 L352 376 Z" fill="#fff" stroke="${O}" stroke-width="8"/>
+  `)},
+
+  blizzard: { name: "Blizzard", round: false, svg: () => {
+    let arms = "", armsLine = "";
+    for (let i = 0; i < 6; i++) {
+      const a = i * 60;
+      const arm = `<g transform="rotate(${a} 256 246)">
+        <path d="M256 246 L256 98"/><path d="M256 170 L222 136"/><path d="M256 170 L290 136"/>
+        <path d="M256 126 L234 104"/><path d="M256 126 L278 104"/></g>`;
+      armsLine += arm; arms += arm;
+    }
+    return frame("#55d2ff", `
+      <g fill="none" stroke="#e9f7ff" stroke-width="12" opacity=".75">
+        <path d="M54 404 Q150 352 214 410 Q260 452 312 414"/>
+        <path d="M200 456 Q300 420 360 446 Q410 468 452 430"/>
+        <path d="M70 120 Q110 86 150 108"/>
+        <path d="M366 92 Q420 70 456 104"/>
+      </g>
+      <g fill="none" stroke="${O}" stroke-width="44">${armsLine}</g>
+      <g fill="none" stroke="#f4f9ff" stroke-width="24">${arms}</g>
+      <polygon points="256,212 285,229 285,263 256,280 227,263 227,229" fill="url(#teal)" stroke="${O}" stroke-width="10"/>
+      ${sparkle(410, 210, 20)}${sparkle(96, 268, 16)}
+    `);
+  }},
+
+  coins_small: { name: "Coins (Small)", round: false, svg: () => frame("#ffc23a", `
+    ${coin(256, 214, 84)}
+    ${coin(196, 318, 84)}
+    ${coin(316, 318, 84)}
+    ${sparkle(392, 148, 20)}
+  `)},
+
+  coins_medium: { name: "Coins (Medium)", round: false, svg: () => frame("#ffc23a", `
+    ${stack(178, 360, 7, 70)}
+    ${stack(336, 372, 4, 70)}
+    ${coin(250, 352, 76)}
+    ${coin(370, 250, 58)}
+    ${sparkle(124, 132, 22)}${sparkle(410, 140, 16)}
+  `)},
+
+  coins_large: { name: "Coins (Large)", round: false, svg: () => frame("#ffc23a", `
+    <path d="M124 270 Q124 150 256 150 Q388 150 388 270 Z" fill="url(#wood)" ${line}/>
+    <path d="M160 270 Q164 186 256 186 Q348 186 352 270 Z" fill="#3a1d16" ${line}/>
+    ${coin(196, 250, 50)}${coin(316, 250, 50)}${coin(256, 226, 54)}
+    ${coin(152, 282, 46)}${coin(360, 282, 46)}${coin(228, 284, 48)}${coin(292, 286, 48)}
+    <rect x="110" y="284" width="292" height="144" rx="18" fill="url(#wood)" ${line}/>
+    <rect x="110" y="284" width="292" height="34" rx="10" fill="url(#goldDark)" ${line}/>
+    <rect x="160" y="284" width="28" height="144" fill="url(#goldDark)" ${line}/>
+    <rect x="324" y="284" width="28" height="144" fill="url(#goldDark)" ${line}/>
+    <rect x="232" y="304" width="48" height="56" rx="10" fill="url(#gold)" ${line}/>
+    <circle cx="256" cy="326" r="8" fill="${O}"/>
+    ${shine(140, 350, 10, 32, 0)}
+    ${sparkle(104, 160, 24)}${sparkle(414, 150, 20)}${sparkle(430, 380, 14)}
+  `)},
+
+  advent: { name: "Advent Catch-up", round: false, svg: () => {
+    const numbers = [7, 14, 2, 21, null, 9, 18, 11, 25];
+    let doors = "";
+    numbers.forEach((n, i) => {
+      const x = 132 + (i % 3) * 88, y = 136 + Math.floor(i / 3) * 90;
+      if (n === null) {
+        doors += `<rect x="${x}" y="${y}" width="72" height="78" rx="8" fill="#0d1330" ${line}/>
+          <circle cx="${x + 36}" cy="${y + 39}" r="26" fill="#ffd34d" opacity=".5" filter="url(#soft)"/>
+          <polygon points="${x + 36},${y + 16} ${x + 43},${y + 32} ${x + 60},${y + 33} ${x + 47},${y + 44} ${x + 51},${y + 61} ${x + 36},${y + 52} ${x + 21},${y + 61} ${x + 25},${y + 44} ${x + 12},${y + 33} ${x + 29},${y + 32}" fill="url(#gold)" stroke="${O}" stroke-width="5"/>
+          <polygon points="${x},${y} ${x - 14},${y + 10} ${x - 14},${y + 68} ${x},${y + 78}" fill="url(#cream)" stroke="${O}" stroke-width="8"/>`;
+      } else {
+        doors += `<rect x="${x}" y="${y}" width="72" height="78" rx="8" fill="url(#cream)" stroke="${O}" stroke-width="8"/>
+          ${text(x + 36, y + 56, n, 38, "#e02f40")}`;
+      }
+    });
+    return frame("#ff5a5a", `
+      <g transform="translate(14 8) scale(0.9)">
+        <rect x="108" y="112" width="296" height="296" rx="22" fill="url(#pine)" ${line}/>
+        ${doors}
+      </g>
+      <g transform="translate(6 14)">
+        ${badge(394, 396, "", "teal")}
+        <path d="M372 386 A26 26 0 1 0 394 370" fill="none" stroke="${O}" stroke-width="20"/>
+        <path d="M372 386 A26 26 0 1 0 394 370" fill="none" stroke="#fff" stroke-width="10"/>
+        <polygon points="352,372 376,404 392,376" fill="#fff" stroke="${O}" stroke-width="6"/>
+      </g>
+    `);
+  }},
+};
+
+const params = new URLSearchParams(location.search);
+const id = params.get("id") || "sheet";
+const root = document.getElementById("root");
+if (id === "sheet") {
+  root.innerHTML = `<div class="sheet">${Object.entries(ICONS).map(([key, icon]) =>
+    `<figure class="${icon.round ? "round" : ""}">${icon.svg()}<figcaption>${icon.name} (${key})</figcaption></figure>`).join("")}</div>
+    <div class="small">${Object.values(ICONS).map((icon) =>
+      `<div style="width:110px;height:110px;overflow:hidden;${icon.round ? "border-radius:50%" : "border-radius:12px"}">
+         <div style="transform:scale(${110 / 512});transform-origin:0 0">${icon.svg()}</div></div>`).join("")}</div>`;
+} else {
+  root.innerHTML = ICONS[id].svg();
+}
+document.title = Object.keys(ICONS).join(",");
+</script>
+</body>
+</html>

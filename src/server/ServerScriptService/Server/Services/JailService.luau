@@ -3,7 +3,7 @@
 -- Caught by an elf: the carried present goes back to its zone, a "NAUGHTY!" stamp plays (the
 -- player is held still), then the player is in the coal-mine cell under the Town Square.
 -- Three ways out: wait Jail.WaitSeconds; mine Jail.CoalToEscape coal rocks (each rock once per
--- visit); or Bail Out with Robux (Phase 6, will call JailService:Release). Coal mined is kept.
+-- visit); or Bail Out with Robux (6.2: MonetizationService calls JailService:Release). Coal mined is kept.
 -- No coins are lost: only the present you were carrying.
 
 local CollectionService = game:GetService("CollectionService")
@@ -278,7 +278,7 @@ function JailService:IsJailed(player: Player): boolean
 	return visits[player] ~= nil
 end
 
--- Lets the player out now (Phase 6: Bail Out calls this after ProcessReceipt grants it).
+-- Lets the player out now (MonetizationService: a Bail Out purchase or a saved free Bail Out).
 function JailService:Release(player: Player)
 	release(player)
 end

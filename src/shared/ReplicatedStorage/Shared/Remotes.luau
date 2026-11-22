@@ -25,6 +25,7 @@ local EVENTS: { [string]: Direction } = {
 	RequestPurchase = "ClientToServer", -- item id only, never a price; ShopService validates (4.2)
 	ShopResult = "ServerToClient", -- Types.ShopResult: bought or why not, for the shop screen
 	IndexSync = "ServerToClient", -- { string }: every Index key the player has found (4.4)
+	RequestBailOut = "ClientToServer", -- no arguments: use a saved free Bail Out; MonetizationService validates (6.2)
 }
 
 local Remotes = {}

@@ -70,7 +70,8 @@ src/client/  Main.local.luau (requires each module in Controllers/)
              Controllers/  HudController, PresentController, RevealController, OwnerPromptController,
                            DisguiseController,
                            ShopController, JailController, IndexController, AdventController,
-                           TutorialController, SoundController (5.6)
+                           TutorialController, SoundController (5.6),
+                           StoreController and BlizzardController (6.2)
 ServerStorage/Templates (place file): Present, Toy (2.1/2.2), ElfGuard and HeadElf (5.3: generated R15 elf +
 lantern; Head/Alert and Head/AlertSound are required). ServerStorage/CharacterOptions holds the unpicked options.
 Animation IDs live in Config.Animations (owned by the game owner); GuardService plays the elf's, JailController the
@@ -99,8 +100,21 @@ item id only) -> Player attributes Shop_<ItemId> = owned level. GuardService rea
 DisguiseService reads Shop_ExtraWrap, ZoneController reads Shop_Zone2/3; ZoneService:OwnsZone reads the save.
 Player attributes the server sets for the UI: Hideout, CarryCount, CarryCapacity, Coins, IncomePerSecond,
 Jailed (3.3), Coal (3.3). Coins/Coal (and the Coins leaderstat) are display copies EconomyService writes
-from the saved data (4.1). StarterGui/JailGui (3.3): Stamp + Panel, and a hidden
-Panel.BailOutButton slot for Phase 6 (JailService:Release is the hook).
+from the saved data (4.1). StarterGui/JailGui (3.3): Stamp + Panel; Panel.BailOutButton (6.2) is wired
+by JailController.
+Robux (6.2): MonetizationService is the ONLY setter of MarketplaceService.ProcessReceipt. Products are granted
+through DataService:ProcessPurchase (grant + PurchaseId in one non-yielding step, then wait for the save).
+IDs and effect numbers live in Config.GamePasses / Config.DevProducts; Shared/StoreCatalog.luau holds the store
+cards, coin pack amounts and the Lucky Wrap odds text. Pass effects reach other services as Player attributes
+`Pass_<Key>` (ShelfService: Vip; PresentService: BigSack; DisguiseService: WrapMaster; SpeedBoots is a
+MovementService modifier), plus PassesChecked, LuckyWraps, BailCredits and PaidRandomItemsRestricted.
+Blizzard: Workspace attributes BlizzardEndsAt (server time) and BlizzardBy, plus GuardService:SetBlizzard.
+Client: StoreController (StoreGui, HudGui.StoreButton left of Coins), BlizzardController (HudGui.Blizzard
+banner), and SnowController (heavier snow). Studio test hook: `ServerStorage.DebugMonetization:Invoke("receipt",
+player, productKey, purchaseId?)` runs a fake receipt; `("pass", player, passKey)` grants a pass. In a Studio
+playtest the real purchase prompt is free and goes through ProcessReceipt too.
+Live prices come from GetProductInfoAsync, and Config prices are only a fallback. On 2026-11-22 the live prices
+differed from the Config prices (Blizzard 59, Lucky Wrap 25, coins 15/59/169), so trust the store screen.
 Zone edges: each zone has a ZoneVolume part tagged ZoneArea; elves never chase past it.
 Models tagged OwnerOnly (+ OwnerUserId attribute): the client hides their prompts from everyone else.
 Comparing Studio `#Source` with `wc -c`: git may have checked the file out with CRLF endings and

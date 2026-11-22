@@ -10,6 +10,7 @@
 -- Payload shape: Types.JailUpdate (validated field by field below; the client trusts nothing).
 
 local CollectionService = game:GetService("CollectionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -222,6 +223,52 @@ local function stopMining(prompt: ProximityPrompt)
 	end)
 end
 
+-- Bail Out (step 6.2): the green button under the jail panel. With a saved free Bail Out it asks
+-- the server to use it (RequestBailOut); otherwise it opens Roblox's purchase prompt. The server
+-- (MonetizationService) does the releasing either way.
+local ROBUX = utf8.char(0xE002)
+local bailPrice = Config.DevProducts.BailOut.price
+
+local function refreshBailButton(button: TextButton)
+	local credits = player:GetAttribute("BailCredits")
+	if type(credits) == "number" and credits > 0 then
+		button.Text = `Use free Bail Out ({credits})`
+	else
+		button.Text = `Bail Out  {ROBUX} {bailPrice}`
+	end
+end
+
+local function setupBailButton(button: TextButton)
+	local productId = Config.DevProducts.BailOut.id
+	if productId <= 0 then
+		button.Visible = false
+		return
+	end
+	task.spawn(function()
+		local ok, info = pcall(function(): any
+			return MarketplaceService:GetProductInfoAsync(productId, Enum.InfoType.Product)
+		end)
+		if ok and type(info) == "table" and type(info.PriceInRobux) == "number" then
+			bailPrice = info.PriceInRobux
+			refreshBailButton(button)
+		end
+	end)
+	local request = Remotes.get("RequestBailOut")
+	button.Activated:Connect(function()
+		local credits = player:GetAttribute("BailCredits")
+		if type(credits) == "number" and credits > 0 then
+			request:FireServer()
+		else
+			MarketplaceService:PromptProductPurchase(player, productId)
+		end
+	end)
+	player:GetAttributeChangedSignal("BailCredits"):Connect(function()
+		refreshBailButton(button)
+	end)
+	refreshBailButton(button)
+	button.Visible = true
+end
+
 function JailController:Init() end
 
 function JailController:Start()
@@ -243,6 +290,12 @@ function JailController:Start()
 	hint = if hintLabel and hintLabel:IsA("TextLabel") then hintLabel else nil
 	stamp.Visible = false
 	panel.Visible = false
+	local bailButton = panel:FindFirstChild("BailOutButton")
+	if bailButton and bailButton:IsA("TextButton") then
+		setupBailButton(bailButton) -- inside the panel, so it shows only while jailed
+	else
+		warn("[JailController] JailGui.Panel.BailOutButton is missing; no Bail Out button")
+	end
 
 	-- Rock prompts are made by the server; keep them hidden until we're jailed.
 	setRockPrompts()

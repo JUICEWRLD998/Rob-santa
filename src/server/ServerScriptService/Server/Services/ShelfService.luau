@@ -32,6 +32,8 @@ local OWNER_TAG = "OwnerOnly" -- the client hides prompts inside these unless it
 local OWNER_ATTRIBUTE = "OwnerUserId"
 local INDEX_ATTRIBUTE = "Hideout"
 local TOY_GAP = 0.4 -- studs between toys waiting on the table
+local VIP_ATTRIBUTE = "Pass_Vip" -- StoreCatalog.passAttribute("Vip"), set by MonetizationService
+local PASSES_CHECKED_ATTRIBUTE = "PassesChecked" -- MonetizationService: pass ownership is known
 
 type Entry = {
 	owned: Types.OwnedToy,
@@ -72,11 +74,22 @@ local function isNear(player: Player, part: BasePart, distance: number): boolean
 end
 
 -- Shelf income x the Index bonus (+5% per completed page, step 4.4).
+-- VIP (step 6.2): x coinMultiplier on shelf income (offline too) and on every sale.
+-- MonetizationService sets the attribute and calls RefreshIncome when it changes.
+local function coinMultiplier(player: Player): number
+	return if player:GetAttribute(VIP_ATTRIBUTE) == true then Config.GamePasses.Vip.coinMultiplier else 1
+end
+
+local function salePrice(player: Player, entry: Entry): number
+	return ToyMath.sellPrice(entry.owned.toyId, entry.owned.mutation) * coinMultiplier(player)
+end
+
 local function incomeOf(player: Player, state: State): number
 	local total = 0
 	for _, entry in state.shelves do
 		total += ToyMath.incomePerSecond(entry.owned.toyId, entry.owned.mutation)
 	end
+	total *= coinMultiplier(player)
 	local data = DataService:GetData(player)
 	return if data then total * IndexBook.incomeMultiplier(data.index) else total
 end
@@ -183,7 +196,7 @@ local function sellShelved(player: Player, slot: number, entry: Entry)
 	state.shelves[slot] = nil
 	destroyModel(entry)
 	saveToys(player, state)
-	local price = ToyMath.sellPrice(entry.owned.toyId, entry.owned.mutation)
+	local price = salePrice(player, entry)
 	if price > 0 then
 		EconomyService:AddCoins(player, price)
 	end
@@ -201,7 +214,7 @@ local function showOnShelf(player: Player, state: State, slot: number, entry: En
 	if not part then
 		return
 	end
-	local price = ToyMath.sellPrice(entry.owned.toyId, entry.owned.mutation)
+	local price = salePrice(player, entry)
 	local objectText = `{displayName(entry)}: {price} coins`
 	local model = buildWithPrompt(player, entry, "Sell", objectText, Config.Shelves.SellHoldSeconds, function(who)
 		if who == player then
@@ -294,7 +307,7 @@ local function sellAllWaiting(player: Player, market: BasePart)
 	end
 	local total = 0
 	for _, entry in state.waiting do
-		total += ToyMath.sellPrice(entry.owned.toyId, entry.owned.mutation)
+		total += salePrice(player, entry)
 		destroyModel(entry)
 	end
 	state.waiting = {}
@@ -356,11 +369,20 @@ local function formatDuration(seconds: number): string
 	return `{math.max(minutes, 1)}m`
 end
 
--- Pays the shelves' income for the time the player was away, up to the offline cap.
--- (VIP's longer cap, Config.Offline.MaxHoursVip, is added with game passes in Phase 6.)
+-- Pays the shelves' income for the time the player was away, up to the offline cap (VIP: longer,
+-- and x2). Waits a little for the pass check first, or a VIP would be paid as a free player.
 local function payOffline(player: Player, state: State)
+	local waitUntil = os.clock() + Config.Store.PassesWaitSeconds
+	while player:GetAttribute(PASSES_CHECKED_ATTRIBUTE) ~= true and player.Parent and os.clock() < waitUntil do
+		task.wait(0.2)
+	end
+	if stateOf[player] ~= state then
+		return -- left (or lost the hideout) while waiting; the seconds stay unpaid for next time
+	end
 	local away = DataService:TakeOfflineSeconds(player)
-	local paidSeconds = math.min(away, Config.Offline.MaxHours * 3600)
+	local isVip = player:GetAttribute(VIP_ATTRIBUTE) == true
+	local capHours = if isVip then Config.Offline.MaxHoursVip else Config.Offline.MaxHours
+	local paidSeconds = math.min(away, capHours * 3600)
 	local coins = math.floor(incomeOf(player, state) * paidSeconds)
 	if coins > 0 and EconomyService:AddCoins(player, coins) then
 		message(player, `Welcome back! Your shelves earned {coins} coins while you were away ({formatDuration(paidSeconds)})`)
@@ -509,11 +531,18 @@ function ShelfService:GetIncomePerSecond(player: Player): number
 	return if state then incomeOf(player, state) else 0
 end
 
--- Re-shows income after something outside the shelves changed it (an Index page completed).
+-- Re-shows income after something outside the shelves changed it (an Index page completed, or
+-- VIP arriving: then the shelved toys' "Sell" prompts show the doubled price too).
 function ShelfService:RefreshIncome(player: Player)
 	local state = stateOf[player]
 	if state then
 		refreshIncome(player, state)
+		for _, entry in state.shelves do
+			local prompt = entry.model and entry.model:FindFirstChildWhichIsA("ProximityPrompt", true)
+			if prompt then
+				prompt.ObjectText = `{displayName(entry)}: {salePrice(player, entry)} coins`
+			end
+		end
 	end
 end
 
