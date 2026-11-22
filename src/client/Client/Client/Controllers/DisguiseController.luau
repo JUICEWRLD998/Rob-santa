@@ -209,6 +209,12 @@ function DisguiseController:Start()
 				task.defer(placeTouchButton, added)
 			end
 		end)
+		-- No wrapping in jail (the server refuses it), so the button hides there and the cell stays clear.
+		local function refreshJailed()
+			button.Visible = player:GetAttribute("Jailed") ~= true
+		end
+		player:GetAttributeChangedSignal("Jailed"):Connect(refreshJailed)
+		refreshJailed()
 	end
 
 	Remotes.get("DisguiseUpdate").OnClientEvent:Connect(onUpdate)

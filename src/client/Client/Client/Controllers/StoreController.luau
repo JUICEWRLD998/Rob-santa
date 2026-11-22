@@ -1,5 +1,5 @@
 --!strict
--- The Robux store screen (step 6.2). Opens from the ROBUX button left of the coin counter.
+-- The Robux store screen (step 6.2). Opens from the ROBUX button (top-right, under DAILY).
 -- StoreGui (a copy of the Gadget Shop panel, with an Icon on each card) and HudGui.StoreButton live
 -- in the place file; this fills one card per StoreCatalog entry.
 -- Prices and icons come live from Creator Hub (GetProductInfoAsync); Config's prices are only a

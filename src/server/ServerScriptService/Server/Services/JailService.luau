@@ -17,6 +17,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local EconomyService = require(script.Parent.EconomyService)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
 
 local JAILED_ATTRIBUTE = "Jailed" -- set on the player while jailed (the client reads it)
 
@@ -185,6 +186,7 @@ local function tryMine(player: Player, index: number)
 	visit.coal += 1
 	EconomyService:AddCoal(player, 1)
 	if visit.coal >= Config.Jail.CoalToEscape then
+		GameEvents.fire("MinedOut", player)
 		release(player)
 	else
 		send(player, visit)

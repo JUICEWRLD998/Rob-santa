@@ -51,16 +51,22 @@ StoreCatalog.withCommas = withCommas
 
 -- Coins a pack gives right now: incomeSeconds of current income, at least minCoins, rounded down
 -- to 2 significant figures so the number reads cleanly ("12,000", not "12,347").
+-- `incomeSeconds` of income, never less than `minCoins`, rounded down to 2 significant figures
+-- (but not below minCoins). Coin packs use it, and so do the Advent, streak and quest rewards (6.3).
+function StoreCatalog.incomeCoins(incomePerSecond: number, incomeSeconds: number, minCoins: number): number
+	local income = if incomePerSecond == incomePerSecond and incomePerSecond > 0 then incomePerSecond else 0
+	local raw = math.max(minCoins, income * incomeSeconds, 1)
+	local digits = math.floor(math.log10(raw)) + 1
+	local unit = 10 ^ math.max(0, digits - 2)
+	return math.max(minCoins, math.floor(raw / unit) * unit)
+end
+
 function StoreCatalog.coinPackAmount(key: ProductKey, incomePerSecond: number): number
 	local pack = (products :: any)[key]
 	if type(pack) ~= "table" or type(pack.incomeSeconds) ~= "number" then
 		return 0
 	end
-	local income = if incomePerSecond == incomePerSecond and incomePerSecond > 0 then incomePerSecond else 0
-	local raw = math.max(pack.minCoins, income * pack.incomeSeconds)
-	local digits = math.floor(math.log10(raw)) + 1
-	local unit = 10 ^ math.max(0, digits - 2)
-	return math.max(pack.minCoins, math.floor(raw / unit) * unit)
+	return StoreCatalog.incomeCoins(incomePerSecond, pack.incomeSeconds, pack.minCoins)
 end
 
 -- The Lucky Wrap odds, shown before buying (a paid random item; Roblox requires this).

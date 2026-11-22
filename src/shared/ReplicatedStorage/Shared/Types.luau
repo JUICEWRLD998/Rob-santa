@@ -63,6 +63,21 @@ export type ShopResult = {
 	message: string, -- "Bought Boots level 2!" or why not
 }
 
+-- Sent server -> client on DailySync (6.3): everything the Daily screen shows. Display only.
+export type AdventDoorState = "Opened" | "Today" | "Missed" | "Locked"
+export type DailyQuest = { text: string, progress: number, goal: number, reward: number, done: boolean }
+export type DailySync = {
+	doors: { AdventDoorState }, -- index = December day 1-25
+	rewards: { string }, -- index = day: "Coins" or a rarity name, for the door labels
+	calendarOpen: boolean, -- false outside December 1 - January CatchUpUntilJanuaryDay
+	catchUpCoal: number,
+	coal: number,
+	streak: number, -- days in a row, counting today
+	streakRewards: { number }, -- coins for streak days 1-7 at the player's current income
+	quests: { DailyQuest },
+	secondsToNextDay: number, -- until the next UTC midnight
+}
+
 -- The contract every server Service and client Controller module follows.
 -- Init runs for all modules first (set up state, no yielding); Start runs after (may yield).
 export type Module = {

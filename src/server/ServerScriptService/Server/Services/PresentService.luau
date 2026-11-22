@@ -18,6 +18,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Types = require(ReplicatedStorage.Shared.Types)
 local MovementService = require(script.Parent.MovementService)
 local ZoneService = require(script.Parent.ZoneService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
 
 local PRESENT_TAG = "Present" -- on every present model, so the client can find their prompts
 local CARRY_MODIFIER = "carry"
@@ -185,6 +186,7 @@ local function tryGrab(player: Player, present: Present)
 	present.carrier = player
 	table.insert(list, present)
 	refreshCarrier(player)
+	GameEvents.fire("PresentGrabbed", player)
 end
 
 local function addPrompt(present: Present)

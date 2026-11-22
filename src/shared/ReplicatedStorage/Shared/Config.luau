@@ -180,6 +180,9 @@ local Config = {
 		-- ServerStorage/DebugMonetization (BindableFunction, step 6.2): Claude's Studio tests can
 		-- give a pass or run a fake receipt through the real purchase code. Studio only.
 		MonetizationHookInStudio = true,
+		-- ServerStorage/DebugDaily (BindableFunction, step 6.3): Claude's Studio tests can pretend
+		-- it is another UTC date (to open December doors in November) and re-check the day. Studio only.
+		DailyHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -335,7 +338,7 @@ local Config = {
 		CoinPackSmall = { id = 3734662915, price = 25, incomeSeconds = 5 * 60, minCoins = 1000 },
 		CoinPackMedium = { id = 3734663330, price = 99, incomeSeconds = 25 * 60, minCoins = 5000 },
 		CoinPackLarge = { id = 3734663722, price = 299, incomeSeconds = 90 * 60, minCoins = 20000 },
-		AdventCatchUp = { id = 3734667673, price = 19 }, -- sold from the Advent board in 6.3; until then a receipt stays unprocessed
+		AdventCatchUp = { id = 3734667673, price = 19 }, -- opens one missed Advent door (DailyService, 6.3)
 	},
 	Store = {
 		PassCheckRetries = 3, -- (my pick) UserOwnsGamePassAsync attempts per pass on join
@@ -345,13 +348,73 @@ local Config = {
 		VipTagColor = Color3.fromRGB(255, 205, 60),
 	},
 
-	-- Section 11: reasons to come back.
+	-- Section 11: reasons to come back (step 6.3). DailyService runs all three; every date is UTC.
+	-- Coin rewards grow with the player (my pick, like the coin packs): `minutes` of their current
+	-- shelf income, but never less than `min`, rounded to 2 significant figures.
 	Advent = {
-		LastDay = 25, -- day 25 = guaranteed Mythic; doors open by real UTC date
-		Month = 12,
+		LastDay = 25, -- doors 1-25 of December; door N opens free on December N
+		-- (my pick) after Christmas, missed doors can still be caught up until January 6, then the
+		-- calendar closes until next December (a new December starts a fresh calendar).
+		CatchUpUntilJanuaryDay = 6,
+		CatchUpCoal = 10, -- (my pick) one missed door for coal; a jail visit gives up to Jail.CoalToEscape
+		-- (my pick) odd days coins, even days a toy of rising rarity, day 25 a guaranteed Mythic.
+		-- A toy goes on the unwrap table with the full reveal (no mutation roll).
+		Rewards = {
+			{ coinMinutes = 3, minCoins = 300 }, -- 1
+			{ rarity = "Uncommon" },
+			{ coinMinutes = 4, minCoins = 400 },
+			{ rarity = "Uncommon" },
+			{ coinMinutes = 5, minCoins = 500 }, -- 5
+			{ rarity = "Uncommon" },
+			{ coinMinutes = 6, minCoins = 700 },
+			{ rarity = "Uncommon" },
+			{ coinMinutes = 7, minCoins = 900 },
+			{ rarity = "Rare" }, -- 10
+			{ coinMinutes = 8, minCoins = 1100 },
+			{ rarity = "Rare" },
+			{ coinMinutes = 9, minCoins = 1300 },
+			{ rarity = "Rare" },
+			{ coinMinutes = 10, minCoins = 1600 }, -- 15
+			{ rarity = "Rare" },
+			{ coinMinutes = 11, minCoins = 1900 },
+			{ rarity = "Epic" },
+			{ coinMinutes = 12, minCoins = 2200 },
+			{ rarity = "Epic" }, -- 20
+			{ coinMinutes = 13, minCoins = 2600 },
+			{ rarity = "Epic" },
+			{ coinMinutes = 15, minCoins = 3000 },
+			{ rarity = "Legendary" },
+			{ rarity = "Mythic" }, -- 25: Christmas Day
+		} :: { { coinMinutes: number?, minCoins: number?, rarity: Types.Rarity? } },
+		PromptDistance = 12, -- the "Advent Calendar" prompt on the Town board
+		RequestCooldownSeconds = 0.4, -- (my pick) rate limit on RequestAdventDoor
 	},
-	LoginStreakDays = 7,
-	DailyQuestCount = 3,
+	-- Daily login streak: paid once per UTC day, on join or at midnight while playing. Day 8 onward
+	-- keeps paying the day-7 reward (my pick); missing a day starts again at day 1.
+	LoginStreak = {
+		Rewards = {
+			{ coinMinutes = 2, minCoins = 200 },
+			{ coinMinutes = 3, minCoins = 300 },
+			{ coinMinutes = 4, minCoins = 500 },
+			{ coinMinutes = 5, minCoins = 800 },
+			{ coinMinutes = 7, minCoins = 1200 },
+			{ coinMinutes = 10, minCoins = 1800 },
+			{ coinMinutes = 15, minCoins = 3000 },
+		},
+	},
+	-- Daily quests: Count picked per player per UTC day from Pool (the same 3 all day). Paid the
+	-- moment the goal is reached. `event` names a server GameEvents event (Lib/GameEvents.luau).
+	Quests = {
+		Count = 3,
+		Pool = {
+			{ id = "Steal", text = "Steal %d presents", goal = 10, event = "PresentGrabbed", coinMinutes = 5, minCoins = 500 },
+			{ id = "Fool", text = "Survive %d elf inspections", goal = 2, event = "InspectionSurvived", coinMinutes = 6, minCoins = 600 },
+			{ id = "MineOut", text = "Escape jail by mining", goal = 1, event = "MinedOut", coinMinutes = 4, minCoins = 400 },
+			{ id = "Unwrap", text = "Unwrap %d presents", goal = 5, event = "PresentUnwrapped", coinMinutes = 5, minCoins = 500 },
+			{ id = "Sell", text = "Sell %d toys", goal = 3, event = "ToySold", coinMinutes = 3, minCoins = 300 },
+		},
+		CheckSeconds = 30, -- how often a new UTC day is noticed for players already in the game
+	},
 }
 
 return deepFreeze(Config)

@@ -21,6 +21,7 @@ local IndexService = require(script.Parent.IndexService)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
 local ShelfService = require(script.Parent.ShelfService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
 
 local INDEX_ATTRIBUTE = "Hideout"
 
@@ -138,6 +139,7 @@ local function unwrapOne(player: Player, present: PresentService.Delivered)
 	local result: Types.UnwrapResult = { toyId = toy.id, rarity = toy.rarity, mutation = mutation }
 	unwrapReveal:FireClient(player, result)
 	IndexService:Record(player, toy.id, mutation) -- step 4.4: first find pays a bonus
+	GameEvents.fire("PresentUnwrapped", player)
 end
 
 -- Unwraps one present at a time, in delivery order.

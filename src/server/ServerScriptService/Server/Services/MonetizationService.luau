@@ -18,7 +18,7 @@
 --   Blizzard: server-wide for durationSeconds (GuardService:SetBlizzard), buyer named on a banner
 --            (Workspace attributes BlizzardEndsAt / BlizzardBy, read by BlizzardController).
 --   Coin packs: StoreCatalog.coinPackAmount of the buyer's current income.
---   AdventCatchUp: not sold until step 6.3.
+--   AdventCatchUp: opens a missed Advent door (DailyService:GrantAdventCatchUp, step 6.3).
 -- Paid random items (Lucky Wrap): PolicyService decides per player; "PaidRandomItemsRestricted"
 -- hides it on the store screen. If the check fails, it counts as restricted.
 
@@ -33,6 +33,7 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local StoreCatalog = require(ReplicatedStorage.Shared.StoreCatalog)
+local DailyService = require(script.Parent.DailyService)
 local DataService = require(script.Parent.DataService)
 local DisguiseService = require(script.Parent.DisguiseService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -240,6 +241,8 @@ local function grantProduct(player: Player, key: ProductKey, data: PlayerData)
 	elseif key == "Blizzard" then
 		task.spawn(startBlizzard, player)
 		message(player, "BLIZZARD! The elves can barely see. Everyone thanks you!")
+	elseif key == "AdventCatchUp" then
+		DailyService:GrantAdventCatchUp(player, data)
 	else
 		error(`no grant for product {key}`)
 	end

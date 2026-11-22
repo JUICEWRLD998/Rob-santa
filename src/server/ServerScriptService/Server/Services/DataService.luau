@@ -41,6 +41,10 @@ export type PlayerData = {
 	purchases: { [string]: boolean }, -- PurchaseIds already granted (Phase 6, ProcessReceipt)
 	luckyWraps: number, -- Lucky Wraps bought and not used yet (6.2): the next unwrap rolls higher
 	bailCredits: number, -- Bail Outs that arrived when the player was no longer jailed (6.2)
+	adventYear: number, -- the December adventDoors belong to; a new December clears them (6.3)
+	adventKeys: number, -- Advent catch-ups bought when no door was missed; used on the next one (6.3)
+	lastStreakDay: number, -- UTC day number (os.time() // 86400) the login streak last paid (6.3)
+	quests: { day: number, progress: { [string]: number } }, -- today's quest progress (6.3)
 }
 
 -- New players start with this. When a field is added later, Reconcile() fills it in for old saves.
@@ -61,6 +65,10 @@ local TEMPLATE: PlayerData = {
 	purchases = {},
 	luckyWraps = 0,
 	bailCredits = 0,
+	adventYear = 0,
+	adventKeys = 0,
+	lastStreakDay = 0,
+	quests = { day = 0, progress = {} },
 }
 
 type Session = {
