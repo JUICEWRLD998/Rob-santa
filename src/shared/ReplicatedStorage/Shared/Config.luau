@@ -270,6 +270,23 @@ local Config = {
 		OffBelowY = -20, -- no snow underground (Naughty Jail sits at y -60)
 	},
 
+	-- docs/04 section 6 (step 5.6). The sounds themselves are in SoundService/Sfx and
+	-- SoundService/Music (place file; each has a Source attribute naming its library track).
+	-- Volumes there are the base volumes. Everything below is my pick.
+	Audio = {
+		MusicFadeSeconds = 1.5, -- crossfade between the Town, Explore and Chase music
+		ChaseLingerSeconds = 1.5, -- the chase music stays this long after the last elf gives up
+		MusicCheckSeconds = 0.5, -- how often the client checks where you are for the music
+		SniffEverySeconds = 1.6, -- a sniff sound this often while an elf inspects you
+		CoinsMinIncomeSeconds = 3, -- clink only when coins jump by more than this many seconds of
+		-- income, so the passive income tick each second stays quiet
+		CoinsCooldownSeconds = 0.4,
+		-- Unwrap fanfare per rarity tier (Common ... Mythic) and its volume: bigger per rarity.
+		FanfareByTier = { "Chime", "Chime", "FanfareRare", "FanfareRare", "FanfareLegendary", "FanfareLegendary" },
+		FanfareVolumeByTier = { 0.35, 0.5, 0.4, 0.55, 0.55, 0.8 },
+		FanfareSeconds = 3.5, -- long fanfares fade out after this
+	},
+
 	-- Section 6: Collection Index.
 	Index = {
 		ZoneCompleteIncomeBonus = 0.05, -- per completed page, added together (2 pages = +10%)

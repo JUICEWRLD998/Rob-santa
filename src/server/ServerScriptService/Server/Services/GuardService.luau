@@ -89,6 +89,17 @@ local folder: Folder
 local routesByZone: { [number]: { [number]: Route } } = {}
 local zoneAreas: { [number]: BasePart } = {} -- ZoneArea-tagged box per zone: elves never chase past it
 local elves: { Elf } = {}
+-- Step 5.6: how many elves chase each player. Copied to the "ChasedBy" player attribute (display
+-- only) so the client can fade the chase music in and out.
+local chasersOf: { [Player]: number? } = {}
+
+local function setChased(player: Player, delta: number)
+	local count = math.max(0, (chasersOf[player] or 0) + delta)
+	chasersOf[player] = if count > 0 then count else nil
+	if player.Parent then
+		player:SetAttribute("ChasedBy", if count > 0 then count else nil)
+	end
+end
 local snowmen: { Snowman } = {}
 local random = Random.new()
 local rayParams = RaycastParams.new()
@@ -702,6 +713,9 @@ local function runChase(elf: Elf)
 	local guards = Config.Guards
 	local settings = guards.ByZone[elf.zone]
 	local player = elf.target
+	if player then
+		setChased(player, 1)
+	end
 	elf.humanoid.WalkSpeed = elf.chaseSpeed
 	setAlert(elf, true)
 	local startedAt = os.clock()
@@ -787,6 +801,7 @@ local function runChase(elf: Elf)
 	-- Back to patrol from the nearest point on its route. It leaves this player alone a moment,
 	-- otherwise it would re-spot them the same instant and the chase limit would mean nothing.
 	if player then
+		setChased(player, -1)
 		local cooldownEnd = os.clock() + guards.GiveUpCooldownSeconds
 		elf.ignoreUntil[player] = math.max(elf.ignoreUntil[player] or 0, cooldownEnd)
 	end
@@ -1056,6 +1071,9 @@ function GuardService:Init()
 end
 
 function GuardService:Start()
+	Players.PlayerRemoving:Connect(function(player)
+		chasersOf[player] = nil
+	end)
 	local templates = ServerStorage:FindFirstChild("Templates")
 	local template = templates and templates:FindFirstChild("ElfGuard")
 	if not template or not template:IsA("Model") then

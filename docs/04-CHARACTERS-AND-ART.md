@@ -186,6 +186,23 @@ What was built in step 5.5 (place file + RevealController):
 - Use audio from the **Creator Store** only (it's licensed for Roblox). **Never upload copyrighted songs or recordings.** Roblox removes them and it can hurt your account.
 - Music: one calm sneaky jingle for exploring, one faster version for chases, one festive tune for the Town Square.
 
+What was built in step 5.6. All audio comes from the two libraries Roblox licenses for every game: APM Music and Pro Sound Effects. The Sounds are in `SoundService/Sfx` and `SoundService/Music` in the place file; each has a `Source` attribute that names its track. To swap a sound, change its SoundId and keep the name. `SoundController` (client) plays them, and the numbers are in `Config.Audio`.
+
+| Moment | What plays | Notes |
+|---|---|---|
+| Grab | paper rustle, then a high chime "ding" | |
+| Spotted | alarm sting; the elf's own AlertSound still plays at the elf | |
+| Chase | Chase music fades in; it fades out 1.5 s after the last elf gives up | the server sets the `ChasedBy` player attribute |
+| Disguise in | whoosh "fwip" + the chime, high and quiet (the ribbon twinkle) | |
+| Inspection | heartbeat loop + a sniff every 1.6 s | |
+| Inspection passed | soft chime | no "phew" voice in the licensed libraries yet |
+| Caught | whistle, then a stamp thud | |
+| Unwrap | drumroll while the present spins, then a fanfare: chime for Common and Uncommon, "Winner" for Rare and Epic, "Top Prize" for Legendary and Mythic, louder per tier; a thud when a mutation is stamped | the server sets the `Unwrapping` player attribute |
+| Coins | coin clinks when coins jump (a sale or a bonus), never on the per-second income | |
+| Sleigh Raid | not yet; the raid itself is built in Phase 6 | |
+
+Music: **Town** (festive, outside the zones), **Explore** (sneaky, inside any `ZoneArea` box and in the jail), **Chase**. They crossfade over 1.5 s.
+
 ---
 
 ## 7. Performance (phones first)
