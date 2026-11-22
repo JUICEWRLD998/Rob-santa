@@ -265,6 +265,7 @@ local function placeOnShelf(player: Player, entry: Entry)
 	layoutTable(player, state)
 	refreshIncome(player, state)
 	saveToys(player, state)
+	GameEvents.fire("ToyShelved", player)
 end
 
 -- Shows the oldest ToysShownOnTable waiting toys in a row on the table; the rest wait unseen.
@@ -526,6 +527,26 @@ end
 
 -- Re-reads how many shelves the player owns (Config.Shelves.Start + shelves bought in the shop)
 -- and lights up the new slots. Called by ShopService after a shelf is bought.
+-- Tutorial (6.5): the oldest toy model waiting on the player's unwrap table (it carries the "Put on
+-- shelf" prompt), or nil if the table is empty.
+function ShelfService:GetTableToy(player: Player): Model?
+	local state = stateOf[player]
+	local first = state and state.waiting[1]
+	return if first then first.model else nil
+end
+
+-- Tutorial (6.5): how many toys the player has on shelves.
+function ShelfService:GetShelvedCount(player: Player): number
+	local state = stateOf[player]
+	local count = 0
+	if state then
+		for _ in state.shelves do
+			count += 1
+		end
+	end
+	return count
+end
+
 function ShelfService:RefreshShelfCount(player: Player)
 	local state = stateOf[player]
 	local data = DataService:GetData(player)

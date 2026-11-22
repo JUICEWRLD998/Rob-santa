@@ -16,6 +16,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local ShopCatalog = require(ReplicatedStorage.Shared.ShopCatalog)
 local Types = require(ReplicatedStorage.Shared.Types)
 local DataService = require(script.Parent.DataService)
+local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.5: the tutorial waits for Boots
 local DisguiseService = require(script.Parent.DisguiseService)
 local EconomyService = require(script.Parent.EconomyService)
 local MovementService = require(script.Parent.MovementService)
@@ -147,6 +148,7 @@ local function onRequest(player: Player, itemId: any)
 	apply(player, data, item.id, level)
 	local levelText = if item.maxLevel > 1 then ` level {level + 1}` else ""
 	reply(player, item.id, true, `Bought {item.name}{levelText}!`)
+	GameEvents.fire("ShopBought", player)
 end
 
 function ShopService:Init()
