@@ -186,6 +186,9 @@ local Config = {
 		-- ServerStorage/DebugRaid (BindableFunction, step 6.4): "start" begins the 10 s warning now,
 		-- "end" ends a running raid. Studio only.
 		RaidHookInStudio = true,
+		-- ServerStorage/DebugTutorial (BindableFunction, step 6.5): "restart" runs the tutorial again
+		-- for a player, "skip" ends it, "state" reads the step. Studio only.
+		TutorialHookInStudio = true,
 	},
 
 	-- Section 5: the gift-box disguise.
@@ -293,6 +296,24 @@ local Config = {
 		RefreshSeconds = 3, -- (my pick) how often the richest player is re-checked
 		MinPlayersForOutline = 2, -- (my pick) alone in a server, nobody is hunting you: no red outline
 		OutlineColor = Color3.fromRGB(255, 50, 50),
+	},
+
+	-- Section 14 (step 6.5): the first 3 minutes, for brand-new players only. All (my pick) unless noted.
+	Tutorial = {
+		FirstPresentRarity = "Rare" :: Types.Rarity, -- section 14: "guaranteed Rare"
+		SpotDelaySeconds = 2, -- after the first grab, one Zone 1 elf spots you on purpose
+		ElfChaseSpeed = 9, -- that elf is slow (a Zone 1 elf runs 13) and can't catch you
+		ElfChaseSeconds = 15, -- it follows this long at most, giving you time to wrap
+		LostPresentSeconds = 5, -- carrying nothing this long (dropped it, reset) = back to "grab a present"
+		EarnShowSeconds = 4, -- "Your toy earns coins every second!" stays this long
+		DoneShowSeconds = 6, -- the closing line stays this long
+		CheckSeconds = 0.5, -- how often the server re-checks the player's step
+		-- Coins handed over after the first shelf, to buy Boots level 1 (= Upgrades.Boots.costs[1]).
+		GiftCoins = 300,
+		-- Client: the footprint trail.
+		TrailRefreshSeconds = 1.2, -- path re-computed this often
+		FootprintSpacing = 2.2, -- studs between prints
+		FootprintCount = 16, -- prints drawn ahead of you
 	},
 
 	-- docs/04 section 5 (step 5.1): light snowfall, drawn on each client above its own camera.

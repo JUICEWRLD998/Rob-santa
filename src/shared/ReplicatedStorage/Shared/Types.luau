@@ -78,6 +78,17 @@ export type DailySync = {
 	secondsToNextDay: number, -- until the next UTC midnight
 }
 
+-- Sent server -> client on TutorialSync (6.5): the tutorial step this player is on, and what the
+-- footprint trail and the arrow point at (nil = no trail). Display only; the server decides.
+--   Grab: walk to the first present.  Bring: carry it home (an elf spots you on the way).
+--   Shelf: put the toy on a shelf.  Earn: "Your toy earns coins every second!"
+--   Shop: buy Boots level 1.  Done: the closing line.  Off: no tutorial.
+export type TutorialStep = "Grab" | "Bring" | "Shelf" | "Earn" | "Shop" | "Done" | "Off"
+export type TutorialSync = {
+	step: TutorialStep,
+	target: Instance?,
+}
+
 -- The contract every server Service and client Controller module follows.
 -- Init runs for all modules first (set up state, no yielding); Start runs after (may yield).
 export type Module = {

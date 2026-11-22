@@ -45,6 +45,10 @@ export type PlayerData = {
 	adventKeys: number, -- Advent catch-ups bought when no door was missed; used on the next one (6.3)
 	lastStreakDay: number, -- UTC day number (os.time() // 86400) the login streak last paid (6.3)
 	quests: { day: number, progress: { [string]: number } }, -- today's quest progress (6.3)
+	-- Tutorial (6.5): 0 = not started, 1 = grab a present, 2 = bring it home, 3 = shelf the toy,
+	-- 4 = buy Boots, 100 = done. Old saves get 0 from Reconcile; TutorialService marks returning
+	-- players done, so only brand-new players see it.
+	tutorial: number,
 }
 
 -- New players start with this. When a field is added later, Reconcile() fills it in for old saves.
@@ -69,6 +73,7 @@ local TEMPLATE: PlayerData = {
 	adventKeys = 0,
 	lastStreakDay = 0,
 	quests = { day = 0, progress = {} },
+	tutorial = 0,
 }
 
 type Session = {

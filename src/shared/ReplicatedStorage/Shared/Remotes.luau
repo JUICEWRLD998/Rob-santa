@@ -30,6 +30,7 @@ local EVENTS: { [string]: Direction } = {
 	DailySync = "ServerToClient", -- Types.DailySync: calendar, streak and quests for the Daily screen (6.3)
 	RequestSnowball = "ClientToServer", -- (aim: Vector3): camera direction; SnowballService picks the target (6.4)
 	SnowballFx = "ServerToClient", -- (from: Vector3, to: Vector3, seconds: number, hit: string): the throw, for everyone to draw (6.4)
+	TutorialSync = "ServerToClient", -- Types.TutorialSync: the new player's tutorial step and its target (6.5)
 }
 
 local Remotes = {}

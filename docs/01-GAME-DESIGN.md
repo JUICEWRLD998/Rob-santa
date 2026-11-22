@@ -304,6 +304,14 @@ New players decide in the first minute whether to stay, so this gets built prope
 
 Each step fires an analytics funnel event, so you can see where new players quit (07-LAUNCH-AND-GROWTH.md).
 
+How it works (step 6.5, numbers in `Config.Tutorial`, my picks unless the list above says otherwise):
+- **Who gets it.** Only a player whose save is brand new (never joined before, no toys, nothing in the Index). Progress is saved after each step, so a player who leaves halfway picks up where they were. A present they were carrying when they left goes home, so they fetch a new one.
+- **Step 1, grab.** One short hint line sits under the coins (it steps aside while a message is showing). Glowing gold footprints on the ground lead from you to the nearest Zone 1 present, and a gold arrow spins over it. That present turns Rare the moment the trail picks it, and whatever present you grab first is made Rare anyway. Until your first present is home, the other elves cannot see you.
+- **Step 2, the elf.** Two seconds after the grab, the nearest Zone 1 elf shouts "HEY!" and follows you. It is slow (9, a Zone 1 elf normally runs 13) and can never catch you. The hint says "An elf saw you! Tap Wrap! to turn into a present!" (Q on PC, Y on console) and the Wrap! button pulses. If you wrap and hold still, it sniffs and leaves ("...Huh. Just a present."). If you move while it sniffs, it lets you off once ("Hmm? ...I'll let it go this time."). You can also simply run home. The footprints lead to your drop mat, where the present unwraps as usual.
+- **Step 3, shelf.** The footprints lead to the toy on your unwrap table: "Put your toy on a shelf!" Then "Your toy earns coins every second!" and 300 coins arrive, the price of Boots level 1.
+- **Step 4, shop.** The SHOP button pulses: "Here are some coins! Tap SHOP and buy Boots." The button opens the Gadget Shop from anywhere, so there is no trail to the shop counter. Buying Boots level 1 ends it: "Deeper zones have better loot... Good luck, thief!"
+- **Funnel.** The onboarding funnel steps (Creator Hub, Analytics) are: 1 Player Joined, 2 Grabbed First Present, 3 Escaped The Elf, 4 Unwrapped First Present, 5 Shelved First Toy, 6 Bought Boots (Tutorial Done).
+
 ---
 
 ## 15. Content rating (keep it Minimal/Mild)

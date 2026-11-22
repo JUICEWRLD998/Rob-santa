@@ -59,7 +59,7 @@ src/server/  Main.server.luau (requires each module in Services/ and calls :Init
              Services/  PlotService, PresentService, UnwrapService, MovementService, ShelfService,
                         EconomyService, GuardService, DisguiseService, JailService, DataService,
                         ShopService, EventService, MonetizationService, DailyService (6.3: Advent, streak, quests),
-                        SleighRaidService, MostWantedService, SnowballService (6.4), TutorialService,
+                        SleighRaidService, MostWantedService, SnowballService (6.4), TutorialService (6.5: section 14, saved in data.tutorial),
                         NpcService (5.3: idle loop on IdleNpc-tagged models), ZoneService (barriers; Config.Debug.OpenZonesInStudio opens them in Studio only),
                         IndexService (4.4: records finds from UnwrapService, pays the bonus, sends
                         IndexSync; ShelfService multiplies income by IndexBook.incomeMultiplier)
@@ -143,6 +143,16 @@ PresentService:SpawnRaidPresents/ClearRaidPresents (zone 0 = Town presents) and 
 the MostWantedBoard part and puts a Highlight (MostWantedOutline) in the character; Workspace attribute
 MostWantedUserId. SnowballService handles RequestSnowball(aim) and fires SnowballFx to everyone; it uses
 GuardService:GetElfRoots/StunElf and PresentService:KnockLoose. Dropped presents now carry a Steal prompt.
+Tutorial (6.5): TutorialService moves a brand-new player through section 14 and sends TutorialSync
+(Types.TutorialSync: step + target Instance). TutorialController draws the hint (StarterGui/TutorialGui.Hint,
+place file, at y 58: it hides while HudGui.Toast is visible), a local gold footprint trail
+(Workspace/TutorialTrail, client only) and a spinning arrow, and pulses the Wrap! and SHOP buttons. The
+TutorialSafe player attribute makes every elf ignore the player except the one GuardService:TutorialSpot
+sends (slow, never catches, lets a moved box go once). Steps advance on GameEvents (PresentGrabbed,
+InspectionSurvived, PresentUnwrapped, ToyShelved, ShopBought). PresentService:NearestResting/RaiseResting/
+RaiseCarried make the first present Rare. Test hook: `ServerStorage.DebugTutorial:Invoke("restart" | "skip" |
+"state", player)`. Each step logs an AnalyticsService onboarding funnel step once per player.
+**`ContextActionService:GetButton` can yield inside a game LocalScript on a touch device** (2026-11-22, step 6.5). The tutorial hint loop called it every refresh and never got past it on the phone emulator: no error, no warning, and the hint stayed hidden. The same call returned at once from `execute_luau`, so a command-bar test does not prove it is safe. Look the button up in its own thread and keep the result (TutorialController does this).
 **A SurfaceGui's MaxDistance seems to count from the character, not the camera** (2026-11-22, step 6.4): the
 poster stayed blank in a `screen_capture` taken from 17 studs while the character stood in its hideout. WantedGui
 uses MaxDistance 0. Remember this before reading a blank SurfaceGui in a screenshot as broken.

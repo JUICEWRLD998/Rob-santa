@@ -262,18 +262,13 @@ function placeAt(present: Present, point: SpawnPoint)
 	addPrompt(present)
 end
 
--- A new present of `rarity`, wrapped to match, in the Presents folder. Not placed yet.
-local function buildPresent(rarity: Types.Rarity, zone: number): Present?
-	if not template then
-		return nil
+-- Wrapping per rarity (step 5.4): paper colour and material, ribbon colour and material, sparkles.
+-- Safe to call again on a wrapped present (the tutorial re-wraps one as Rare, 6.5).
+local function wrapAs(model: Model, box: BasePart, rarity: Types.Rarity)
+	local old = box:FindFirstChild("WrapSparkles")
+	if old then
+		old:Destroy()
 	end
-	local model = template:Clone()
-	local box = model.PrimaryPart
-	if not box then
-		model:Destroy()
-		return nil
-	end
-	-- Wrapping per rarity (step 5.4): paper colour and material, ribbon colour and material.
 	local wrapping = Config.Wrapping[rarity]
 	box.Color = Config.Rarities[rarity].color
 	box.Material = wrapping.paper
@@ -304,6 +299,20 @@ local function buildPresent(rarity: Types.Rarity, zone: number): Present?
 		emitter.Parent = box
 	end
 	model:SetAttribute("Rarity", rarity)
+end
+
+-- A new present of `rarity`, wrapped to match, in the Presents folder. Not placed yet.
+local function buildPresent(rarity: Types.Rarity, zone: number): Present?
+	if not template then
+		return nil
+	end
+	local model = template:Clone()
+	local box = model.PrimaryPart
+	if not box then
+		model:Destroy()
+		return nil
+	end
+	wrapAs(model, box, rarity)
 	model:SetAttribute("Zone", zone)
 	CollectionService:AddTag(model, PRESENT_TAG)
 	local present: Present = {
@@ -622,6 +631,71 @@ function PresentService:KnockLoose(player: Player): number
 		dropAll(player, player.Character)
 	end
 	return count
+end
+
+-- Tutorial (6.5): raises `present` to at least `rarity`, re-wrapping it to match.
+local function raiseTo(present: Present, rarity: Types.Rarity)
+	local wanted = table.find(Config.RarityOrder, rarity) or 1
+	local current = table.find(Config.RarityOrder, present.rarity) or 1
+	if current >= wanted then
+		return
+	end
+	present.rarity = rarity
+	wrapAs(present.model, present.box, rarity)
+	if present.prompt then
+		addPrompt(present) -- the prompt shows the rarity and its hold time
+	end
+	if present.carrier then
+		refreshCarrier(present.carrier) -- a heavier present slows the carrier more
+	end
+end
+
+-- Tutorial (6.5): the resting present in `zone` nearest to `position`, as a Model (nil if none).
+-- `keep` is returned instead while it is still resting there, so the trail doesn't jump around.
+function PresentService:NearestResting(zone: number, position: Vector3, keep: Model?): Model?
+	local best: Model?, bestDistance = nil, math.huge
+	local points = pointsByZone[zone]
+	if not points then
+		return nil
+	end
+	for _, point in points do
+		local present = point.present
+		if present and present.state == "Resting" then
+			if present.model == keep then
+				return keep
+			end
+			local distance = (present.box.Position - position).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = present.model, distance
+			end
+		end
+	end
+	return best
+end
+
+-- Tutorial (6.5): the resting present `model` becomes at least `rarity` (the guaranteed first Rare).
+function PresentService:RaiseResting(model: Model, rarity: Types.Rarity)
+	for _, list in pointsByZone do
+		for _, point in list do
+			local present = point.present
+			if present and present.model == model and present.state == "Resting" then
+				raiseTo(present, rarity)
+				return
+			end
+		end
+	end
+end
+
+-- Tutorial (6.5): everything `player` carries becomes at least `rarity`. Used on the first grab, in
+-- case the new player took a different present from the one the trail led to.
+function PresentService:RaiseCarried(player: Player, rarity: Types.Rarity)
+	local list = carriedBy[player]
+	if not list then
+		return
+	end
+	for _, present in list do
+		raiseTo(present, rarity)
+	end
 end
 
 -- Re-shows the carry capacity after it changed (Big Sack bought, 6.2).

@@ -11,6 +11,8 @@
 --   runs to where it saw you for alarmChaseSeconds. Head Elf (zone 3): 1.3x, faster, sniffs 5 s.
 --   Step 6.4: Sleigh Raid elves (StartRaid/EndRaid) guard the Town Square for one raid; a snowball
 --   (StunElf) freezes an elf, blind, for Config.Upgrades.Snowball.elfStunSeconds and ends its chase.
+--   Step 6.5: on a new player's first trip (TutorialSafe attribute) only one elf sees them, on
+--   purpose (TutorialSpot): a slow chase that never catches, so the first chase teaches the disguise.
 --
 -- The server owns elf physics (SetNetworkOwner(nil)) so every player sees the same elf in the same
 -- place. Elves sit in their own collision group so two elves never block each other.
@@ -45,6 +47,8 @@ local CONE_PATROL_COLOR = Color3.fromRGB(255, 214, 64)
 local CONE_CHASE_COLOR = Color3.fromRGB(255, 72, 64)
 local CONE_THICKNESS = 0.05
 local STUN_WORDS = "*brrr!*" -- over a snowballed elf's head (6.4)
+local TUTORIAL_SAFE_ATTRIBUTE = "TutorialSafe" -- set by TutorialService on a new player's first trip (6.5)
+local TUTORIAL_LET_GO_WORDS = "Hmm? ...I'll let it go this time." -- the tutorial elf saw the box move
 
 type Route = { BasePart } -- waypoints sorted by their Index attribute
 -- What an elf sees and how fast it runs: its zone's Config.Guards.ByZone entry, or the Sleigh Raid's.
@@ -76,6 +80,9 @@ type Elf = {
 	actions: { [ActionName]: AnimationTrack }, -- step 5.3 animations, loaded once per elf
 	settings: ElfSettings,
 	stunnedUntil: number, -- os.clock: a snowball hit (6.4) freezes it, blind, until then
+	-- Tutorial (6.5): this elf "spotted" a new player on purpose. It chases slowly, never catches,
+	-- and lets a moved gift box go, so the first chase teaches the disguise without a jail trip.
+	tutorialFor: Player?,
 }
 
 -- Snowman Camera (step 3.5): stands still, turns left and right, rings a bell when it sees you.
@@ -131,7 +138,8 @@ local function patrolSpeed(): number
 end
 
 local function chaseSpeedOf(elf: Elf): number
-	return elf.chaseSpeed * speedScale()
+	local speed = if elf.tutorialFor then Config.Tutorial.ElfChaseSpeed else elf.chaseSpeed
+	return speed * speedScale()
 end
 
 local random = Random.new()
@@ -442,6 +450,7 @@ local function spawnElf(
 		actions = actions,
 		settings = settings,
 		stunnedUntil = 0,
+		tutorialFor = nil,
 	}
 end
 
@@ -521,7 +530,14 @@ local function findVisiblePlayer(elf: Elf): Player?
 		local ignoredUntil = elf.ignoreUntil[player]
 		local target = liveTarget(player)
 		-- A patrolling elf walks right past a still gift box (a disguised player is always still).
-		if target and not (ignoredUntil and now < ignoredUntil) and not DisguiseService:IsDisguised(player) then
+		-- A new player on their first trip (TutorialService sets TutorialSafe) is only ever
+		-- spotted by the one tutorial elf (GuardService:TutorialSpot).
+		if
+			target
+			and not (ignoredUntil and now < ignoredUntil)
+			and not DisguiseService:IsDisguised(player)
+			and player:GetAttribute(TUTORIAL_SAFE_ATTRIBUTE) ~= true
+		then
 			local position = target.root.Position
 			if
 				insideZone(elf.zone, position)
@@ -788,6 +804,15 @@ local function runChase(elf: Elf)
 	local chaseLimit = if alarmedAt then guards.SnowmanCamera.alarmChaseSeconds else guards.ChaseMaxSeconds
 	local lostSightLimit = if alarmedAt then chaseLimit else guards.GiveUpAfterLostSightSeconds
 	local lastSeenPosition: Vector3? = alarmedAt
+	-- The tutorial chase (6.5): slow, longer, harmless, and it starts from wherever the new player is
+	-- (the elf may be out of sight when TutorialSpot picks it).
+	local tutorial = player ~= nil and elf.tutorialFor == player
+	if tutorial and player then
+		chaseLimit = Config.Tutorial.ElfChaseSeconds
+		lostSightLimit = chaseLimit
+		local start = liveTarget(player)
+		lastSeenPosition = if start then start.root.Position else nil
+	end
 	local pathPoints: { Vector3 }? = nil
 	local pathTried = false
 	local pathIndex = 2
@@ -804,7 +829,12 @@ local function runChase(elf: Elf)
 		end
 		if DisguiseService:IsDisguised(player) then
 			local result = inspect(elf, player)
-			if result == "Gotcha" then
+			if result == "Gotcha" and tutorial then
+				lastWords = TUTORIAL_LET_GO_WORDS -- a new player who moved is let off, once
+				finale = "ElfShrug"
+				elf.ignoreUntil[player] = os.clock() + Config.Disguise.FooledIgnoreSeconds
+				break
+			elseif result == "Gotcha" then
 				lastWords = "GOTCHA!"
 				finale = "ElfGrab"
 				onCaught(elf, player)
@@ -822,7 +852,12 @@ local function runChase(elf: Elf)
 			continue
 		end
 		local targetPosition = target.root.Position
-		if
+		if tutorial and flatDistance(elf.root.Position, targetPosition) <= guards.CatchDistance then
+			-- The tutorial elf never catches: it stops at arm's length and waits for you to wrap or run.
+			elf.humanoid:MoveTo(elf.root.Position)
+			task.wait(guards.ChaseTickSeconds)
+			continue
+		elseif
 			flatDistance(elf.root.Position, targetPosition) <= guards.CatchDistance
 			and math.abs(elf.root.Position.Y - targetPosition.Y) <= CATCH_HEIGHT
 		then
@@ -834,7 +869,7 @@ local function runChase(elf: Elf)
 		-- While chasing, the elf has turned toward you: sight = in range + clear line, any angle.
 		-- Leaving its zone counts as lost sight, so it never follows you out.
 		local seen = insideZone(elf.zone, targetPosition)
-			and flatDistance(elf.root.Position, targetPosition) <= settings.visionRange * visionScale()
+			and (tutorial or flatDistance(elf.root.Position, targetPosition) <= settings.visionRange * visionScale())
 			and hasLineOfSight(elf, target.character)
 		if seen then
 			lastSeenAt = now
@@ -884,6 +919,7 @@ local function runChase(elf: Elf)
 	end
 	elf.state = "Patrol"
 	elf.target = nil
+	elf.tutorialFor = nil
 	elf.humanoid.WalkSpeed = patrolSpeed()
 	elf.nextIndex = nearestWaypointIndex(elf)
 	if words then
@@ -904,7 +940,14 @@ local function soundAlarm(zone: number, player: Player, position: Vector3)
 	local now = os.clock()
 	for _, elf in elves do
 		local ignoredUntil = elf.ignoreUntil[player]
-		if elf.zone == zone and elf.state == "Patrol" and elf.model.Parent and not isStunned(elf) and not (ignoredUntil and now < ignoredUntil) then
+		if
+			elf.zone == zone
+			and elf.state == "Patrol"
+			and elf.model.Parent
+			and not isStunned(elf)
+			and not (ignoredUntil and now < ignoredUntil)
+			and player:GetAttribute(TUTORIAL_SAFE_ATTRIBUTE) ~= true
+		then
 			elf.alarmPosition = position
 			elf.target = player
 			elf.state = "Chase"
@@ -1258,6 +1301,32 @@ function GuardService:StunElf(root: BasePart, seconds: number): boolean
 		end
 	end
 	return false
+end
+
+-- Tutorial (6.5): the nearest patrolling, unstunned elf in `zone` "spots" `player` on purpose and
+-- starts the slow, harmless tutorial chase. Returns false if no elf is free.
+function GuardService:TutorialSpot(player: Player, zone: number): boolean
+	local target = liveTarget(player)
+	if not target then
+		return false
+	end
+	local best: Elf?, bestDistance = nil, math.huge
+	for _, elf in elves do
+		if elf.zone == zone and elf.state == "Patrol" and elf.model.Parent and not isStunned(elf) then
+			local distance = flatDistance(elf.root.Position, target.root.Position)
+			if distance < bestDistance then
+				best, bestDistance = elf, distance
+			end
+		end
+	end
+	local elf = best
+	if not elf then
+		return false
+	end
+	elf.tutorialFor = player
+	elf.target = player
+	elf.state = "Chase" -- run() picks the chase up on its next step
+	return true
 end
 
 function GuardService:SetBlizzard(on: boolean)
