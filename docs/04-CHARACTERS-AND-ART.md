@@ -165,6 +165,8 @@ What was built in step 5.5 (place file + RevealController):
   - The Shop and Index panels leave 115 px free on each side, so the thumbstick and jump button stay uncovered.
   - The reveal card shrinks on short screens (`Config.Reveal.CardFitHeight`).
   - The Wrap! button sits just left of the jump button on every device. The jump button is 70 px on phones and 120 px on tablets, and a fixed spot overlapped it on the iPad.
+- **Landscape only** (step 7.3): `StarterGui.ScreenOrientation = LandscapeSensor` (place file). It was `Sensor`, so a phone held upright turned the game to portrait, and no screen is laid out for portrait.
+- **Phone check, step 7.3** (Galaxy A06, iPhone 17 Pro, iPad 10th gen): every HUD button is 56 px or more, on screen, clear of the jump button and of each other. The Shop, Index, Store and Daily panels fit. The SHOP button touches the top of the thumbstick area on the A06; a tap on it still opens the shop, because buttons take the touch before the thumbstick does.
 
 ---
 
