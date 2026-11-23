@@ -94,6 +94,9 @@ local Config = {
 	AntiCheat = {
 		MaxTravelSpeed = 29,
 		TravelSpeedSlack = 1.3,
+		-- 7.2: a hold prompt counts only if the server saw the hold begin at least HoldDuration minus
+		-- this many seconds before Triggered (network jitter can shorten the gap a little).
+		HoldSlackSeconds = 0.35,
 	},
 
 	-- Section 13: the unwrap reveal popup (placeholder until Phase 5). All (my pick).

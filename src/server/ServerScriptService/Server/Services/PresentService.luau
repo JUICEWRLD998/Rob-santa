@@ -21,6 +21,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 local MovementService = require(script.Parent.MovementService)
 local ZoneService = require(script.Parent.ZoneService)
 local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
+local HoldGuard = require(script.Parent.Parent.Lib.HoldGuard) -- 7.2: server-timed prompt holds
 
 local PRESENT_TAG = "Present" -- on every present model, so the client can find their prompts
 local CARRY_MODIFIER = "carry"
@@ -214,8 +215,11 @@ local function addPrompt(present: Present)
 	prompt.ObjectText = `{present.rarity} Present`
 	prompt.HoldDuration = rarity.grabHoldSeconds
 	prompt.MaxActivationDistance = Config.Presents.GrabDistance
+	local held = HoldGuard.watch(prompt) -- 7.2: an exploit can't skip the steal hold
 	prompt.Triggered:Connect(function(player)
-		tryGrab(player, present)
+		if held(player) then
+			tryGrab(player, present)
+		end
 	end)
 	prompt.Parent = present.box
 	present.prompt = prompt

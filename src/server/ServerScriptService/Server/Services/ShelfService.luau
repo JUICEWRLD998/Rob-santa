@@ -28,6 +28,7 @@ local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local PlotService = require(script.Parent.PlotService)
 local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
+local HoldGuard = require(script.Parent.Parent.Lib.HoldGuard) -- 7.2: server-timed prompt holds
 
 local OWNER_TAG = "OwnerOnly" -- the client hides prompts inside these unless it is the owner
 local OWNER_ATTRIBUTE = "OwnerUserId"
@@ -131,7 +132,12 @@ local function buildWithPrompt(
 	prompt.ObjectText = objectText
 	prompt.HoldDuration = holdSeconds
 	prompt.MaxActivationDistance = Config.Shelves.PromptDistance
-	prompt.Triggered:Connect(onTriggered)
+	local held = HoldGuard.watch(prompt) -- 7.2
+	prompt.Triggered:Connect(function(player: Player)
+		if held(player) then
+			onTriggered(player)
+		end
+	end)
 	prompt.Parent = body
 	return model
 end
@@ -492,8 +498,11 @@ function ShelfService:Start()
 			prompt.HoldDuration = Config.BlackMarket.HoldSeconds
 			prompt.MaxActivationDistance = Config.BlackMarket.PromptDistance
 			prompt.RequiresLineOfSight = false -- the stall is one big block; its centre is inside it
+			local held = HoldGuard.watch(prompt) -- 7.2
 			prompt.Triggered:Connect(function(player)
-				sellAllWaiting(player, market)
+				if held(player) then
+					sellAllWaiting(player, market)
+				end
 			end)
 			prompt.Parent = market
 		end

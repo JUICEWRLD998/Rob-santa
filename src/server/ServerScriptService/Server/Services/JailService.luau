@@ -18,6 +18,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local PlotService = require(script.Parent.PlotService)
 local PresentService = require(script.Parent.PresentService)
 local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily quest progress
+local HoldGuard = require(script.Parent.Parent.Lib.HoldGuard) -- 7.2: server-timed prompt holds
 
 local JAILED_ATTRIBUTE = "Jailed" -- set on the player while jailed (the client reads it)
 
@@ -206,8 +207,11 @@ local function setupRocks()
 			prompt.RequiresLineOfSight = false
 			-- Shown only to jailed players by JailController; the server checks anyway.
 			prompt.Parent = instance
+			local held = HoldGuard.watch(prompt) -- 7.2: each swing takes the full hold
 			prompt.Triggered:Connect(function(player)
-				tryMine(player, index)
+				if held(player) then
+					tryMine(player, index)
+				end
 			end)
 		else
 			warn(`[JailService] CoalRock {instance:GetFullName()} needs a number Index attribute`)

@@ -364,7 +364,13 @@ function MonetizationService:Start()
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, passId: number, purchased: boolean)
 		local key = passKeyById[passId]
 		if purchased and key then
-			grantPass(player, key :: PassKey, true)
+			-- 7.2: confirm with Roblox before granting, never on the event's word alone. The docs say
+			-- this event refreshes the UserOwnsGamePassAsync cache, so a real purchase passes at once.
+			task.spawn(function()
+				if ownsPass(player, passId) then
+					grantPass(player, key :: PassKey, true)
+				end
+			end)
 		end
 	end)
 	Remotes.get("RequestBailOut").OnServerEvent:Connect(onBailRequest)
