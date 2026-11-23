@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local IndexBook = require(ReplicatedStorage.Shared.IndexBook)
 local ProfileStore = require(script.Parent.Parent.Lib.ProfileStore)
 
 local STORE_NAME = "PlayerData"
@@ -49,6 +50,10 @@ export type PlayerData = {
 	-- 4 = buy Boots, 100 = done. Old saves get 0 from Reconcile; TutorialService marks returning
 	-- players done, so only brand-new players see it.
 	tutorial: number,
+	-- 7.5: toys rolled the moment a present starts unwrapping, while it still spins on the table.
+	-- Moved to tableToys at the reveal. A player who leaves (or a server that stops) mid-unwrap
+	-- finds them on the table at the next join, so a delivered present is never lost.
+	unwrapping: { SavedTableToy },
 }
 
 -- New players start with this. When a field is added later, Reconcile() fills it in for old saves.
@@ -74,6 +79,7 @@ local TEMPLATE: PlayerData = {
 	lastStreakDay = 0,
 	quests = { day = 0, progress = {} },
 	tutorial = 0,
+	unwrapping = {},
 }
 
 type Session = {
@@ -133,6 +139,18 @@ local function onPlayerAdded(player: Player)
 	end
 
 	local data = profile.Data :: PlayerData
+	-- 7.5: presents that were still unwrapping when they left: their toys go on the table now,
+	-- before anything else reads tableToys. The Index records them too (the find bonus is skipped).
+	if #data.unwrapping > 0 then
+		for _, toy in data.unwrapping do
+			table.insert(data.tableToys, { toyId = toy.toyId, mutation = toy.mutation })
+			local key = IndexBook.key(toy.toyId, toy.mutation :: any)
+			if IndexBook.isValidKey(key) then
+				data.index[key] = true
+			end
+		end
+		data.unwrapping = {}
+	end
 	local now = os.time()
 	local session: Session = {
 		profile = profile,

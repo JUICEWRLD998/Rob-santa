@@ -148,7 +148,7 @@ How the looks work (step 4.3, placeholder toys until Phase 5): each mutation is 
 ### Shelves
 - Start with 4 shelves. Buy more, up to 20. Cost: `500 × 1.8^(shelves bought)`.
 - Toys earn while you're offline, up to **2 hours** of income (4 hours with VIP). It's paid when you rejoin.
-- Saving (step 4.1): toys waiting on the unwrap table are saved too, not only shelved ones, so nothing is lost on rejoin. Offline time counts from the last save (every 5 minutes and on leaving). A saved toy whose shelf slot no longer exists goes back to the table.
+- Saving (step 4.1): toys waiting on the unwrap table are saved too, not only shelved ones, so nothing is lost on rejoin. Offline time counts from the last save (every 5 minutes and on leaving). A saved toy whose shelf slot no longer exists goes back to the table. Step 7.5: the toy is rolled and saved the moment a present reaches the mat, so a player who leaves (or a server that shuts down) during the unwrap spin finds that toy on the table at the next join. It counts in the Index, but without the find bonus.
 
 ### Collection Index
 - A book listing every toy × every mutation. Discovering a new entry pays a one-time coin bonus.

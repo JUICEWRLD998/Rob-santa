@@ -25,8 +25,18 @@ local GameEvents = require(script.Parent.Parent.Lib.GameEvents) -- 6.3: daily qu
 
 local INDEX_ATTRIBUTE = "Hideout"
 
+-- 7.5: one delivered present with its toy already rolled. `saved` sits in the save's `unwrapping`
+-- list until the reveal, so leaving (or a server shutdown) mid-unwrap can't lose the toy.
+type Job = {
+	present: PresentService.Delivered,
+	toy: Types.ToyDef,
+	mutation: Types.Mutation?,
+	lucky: boolean, -- a Lucky Wrap raised the rarity (told to the player at the reveal)
+	saved: DataService.SavedTableToy,
+}
+
 type Queue = {
-	pending: { PresentService.Delivered },
+	pending: { Job },
 	running: boolean,
 }
 
@@ -94,8 +104,32 @@ local function isOnMat(root: BasePart, mat: BasePart): boolean
 		and relative.Y <= Config.Presents.DeliveryMatHeight
 end
 
--- The present sits on the table and spins for UnwrapSeconds, then the toy is rolled.
-local function unwrapOne(player: Player, present: PresentService.Delivered)
+-- 7.5: rolls the toy the moment a present is delivered and writes it into the save's `unwrapping`
+-- list. Returns nil (and the present is lost, as before) only if the save or the toy list is missing.
+local function roll(player: Player, present: PresentService.Delivered): Job?
+	local data = DataService:GetData(player)
+	if not data then
+		return nil
+	end
+	local rarity: Types.Rarity = present.rarity
+	local lucky = luckyRarity(player, rarity)
+	if lucky then
+		rarity = lucky :: Types.Rarity
+	end
+	local toy = pickToy(rarity)
+	if not toy then
+		warn(`[UnwrapService] no toys of rarity {rarity} in Toys.luau`)
+		return nil
+	end
+	local mutation: Types.Mutation? = rollMutation()
+	local saved: DataService.SavedTableToy = { toyId = toy.id, mutation = mutation }
+	table.insert(data.unwrapping, saved)
+	return { present = present, toy = toy, mutation = mutation, lucky = lucky ~= nil, saved = saved }
+end
+
+-- The present sits on the table and spins for UnwrapSeconds, then the (already rolled) toy appears.
+local function unwrapOne(player: Player, job: Job)
+	local present = job.present
 	local index = PlotService:GetHideoutIndex(player)
 	local tablePart = if index then tableOf[index] else nil
 	local box = present.box
@@ -116,22 +150,20 @@ local function unwrapOne(player: Player, present: PresentService.Delivered)
 		player:SetAttribute("Unwrapping", nil)
 	end
 	present.model:Destroy()
-	if player.Parent == nil then
-		return
+	local data = DataService:GetData(player)
+	if player.Parent == nil or not data then
+		return -- left: the toy stays in data.unwrapping and lands on the table at the next join
+	end
+	local position = table.find(data.unwrapping, job.saved)
+	if position then
+		table.remove(data.unwrapping, position)
 	end
 
-	local rarity: Types.Rarity = present.rarity
-	local lucky = luckyRarity(player, rarity)
-	if lucky then
-		notify:FireClient(player, `Lucky Wrap! Your {rarity} present held a {lucky} toy!`)
-		rarity = lucky :: Types.Rarity
+	local toy: Types.ToyDef = job.toy
+	local mutation: Types.Mutation? = job.mutation
+	if job.lucky then
+		notify:FireClient(player, `Lucky Wrap! Your {present.rarity} present held a {toy.rarity} toy!`)
 	end
-	local toy = pickToy(rarity)
-	if not toy then
-		warn(`[UnwrapService] no toys of rarity {rarity} in Toys.luau`)
-		return
-	end
-	local mutation: Types.Mutation? = rollMutation()
 	local owned: Types.OwnedToy = { uid = HttpService:GenerateGUID(false), toyId = toy.id, mutation = mutation }
 	if not ShelfService:AddUnwrapped(player, owned) then
 		warn(`[UnwrapService] could not put {toy.id} on {player.Name}'s table`)
@@ -150,13 +182,13 @@ local function runQueue(player: Player)
 	end
 	queue.running = true
 	while #queue.pending > 0 and player.Parent ~= nil do
-		local present = table.remove(queue.pending, 1)
-		if not present then
+		local job = table.remove(queue.pending, 1)
+		if not job then
 			break
 		end
 		-- The inner function returns `any` so pcall types as (ok, err); see CLAUDE.md "xpcall" note.
 		local ok, err = pcall(function(): any
-			unwrapOne(player, present)
+			unwrapOne(player, job)
 			return nil
 		end)
 		if not ok then
@@ -190,7 +222,12 @@ local function checkDelivery(player: Player)
 		return
 	end
 	for _, present in PresentService:TakeCarried(player) do
-		table.insert(queue.pending, present)
+		local job = roll(player, present)
+		if job then
+			table.insert(queue.pending, job)
+		else
+			present.model:Destroy()
+		end
 	end
 	task.spawn(runQueue, player)
 end
@@ -204,8 +241,8 @@ end
 local function onPlayerRemoving(player: Player)
 	local queue = queueOf[player]
 	if queue then
-		for _, present in queue.pending do
-			present.model:Destroy()
+		for _, job in queue.pending do
+			job.present.model:Destroy() -- their toys stay in data.unwrapping (7.5)
 		end
 	end
 	queueOf[player] = nil
