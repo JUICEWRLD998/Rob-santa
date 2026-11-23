@@ -214,6 +214,13 @@ Music: **Town** (festive, outside the zones), **Explore** (sneaky, inside any `Z
 - Prefer few strong lights over many small ones.
 - Test in the device emulator and on your real phone. If it stutters, ask Claude: `Find what makes the game slow on phones and fix it.`
 
+Step 7.4 check (2026-11-23):
+- World: 1,397 parts, 68 lights, 12 particle emitters, StreamingEnabled on (target radius 1024, so the whole small map streams in). Instance count stayed flat over a minute of play, so nothing is leaking.
+- No light casts shadows (the 8 Town lanterns did), and parts under 2 studs (bulbs, trims) don't cast shadows (239 of them did).
+- Phones and tablets draw 60% of the snowflakes (`Config.Snow.PhoneRateScale`). About 490 flakes are alive at once, 2,450 during a Blizzard.
+- Per-frame code is small: rainbow ribbons on Mythic presents, the snow box following the camera, the tutorial arrow (only during the tutorial) and music fades.
+- Each elf is about 520 instances, mostly rig data left by avatar generation (CFrameValue/Vector3Value) plus 15 PBR textures. The 9 elves make up two thirds of the Workspace. Left as is: it costs join time, not frame rate.
+
 ---
 
 ## 8. Icon and thumbnails

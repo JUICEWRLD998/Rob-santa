@@ -329,6 +329,9 @@ local Config = {
 		FlakeSize = { min = 0.15, max = 0.3 },
 		LifetimeSeconds = 7,
 		OffBelowY = -20, -- no snow underground (Naughty Jail sits at y -60)
+		-- 7.4: phones and tablets (touch, no keyboard) draw this share of the flakes. About 490 flakes
+		-- are alive at once, 2,450 in a Blizzard, and see-through particles cost phones the most.
+		PhoneRateScale = 0.6,
 	},
 
 	-- docs/04 section 6 (step 5.6). The sounds themselves are in SoundService/Sfx and

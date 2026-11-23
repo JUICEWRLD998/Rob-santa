@@ -6,6 +6,7 @@
 
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -57,6 +58,10 @@ function SnowController:Init() end
 function SnowController:Start()
 	local part, emitter = buildEmitter()
 	part.Parent = workspace.CurrentCamera -- local to this client, never replicated
+	-- 7.4: fewer flakes on phones and tablets; a Blizzard still looks 5x heavier than normal snow.
+	local isPhone = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	local baseRate = Config.Snow.Rate * (if isPhone then Config.Snow.PhoneRateScale else 1)
+	emitter.Rate = baseRate
 	RunService.RenderStepped:Connect(function()
 		local camera = workspace.CurrentCamera
 		if not camera then
@@ -71,7 +76,7 @@ function SnowController:Start()
 		-- Blizzard (6.2): much heavier snow while one blows (server time in a Workspace attribute).
 		local endsAt = workspace:GetAttribute("BlizzardEndsAt")
 		local blizzard = type(endsAt) == "number" and workspace:GetServerTimeNow() < endsAt
-		emitter.Rate = Config.Snow.Rate * (if blizzard then Config.DevProducts.Blizzard.snowMultiplier else 1)
+		emitter.Rate = baseRate * (if blizzard then Config.DevProducts.Blizzard.snowMultiplier else 1)
 		part.CFrame = CFrame.new(position + Vector3.new(0, Config.Snow.HeightAboveCamera, 0))
 	end)
 end
