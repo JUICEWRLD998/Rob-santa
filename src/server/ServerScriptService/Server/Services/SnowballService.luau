@@ -150,11 +150,14 @@ local function land(thrower: Player, target: Target, origin: Vector3)
 		return
 	end
 	local victim = target.player
-	if not victim or not victim.Parent or not rootOf(victim) then
+	-- 7.1: read the victim's body NOW. The root picked at throw time belongs to the old character if
+	-- they reset while the ball flew; its frozen position would knock loose what the new body carries.
+	local root = if victim and victim.Parent then rootOf(victim) else nil
+	if not victim or not root or victim.Character ~= target.model then
 		return
 	end
 	-- It may have moved while the ball flew: still close enough, still not hidden or jailed.
-	local flat = Vector3.new(target.root.Position.X - origin.X, 0, target.root.Position.Z - origin.Z).Magnitude
+	local flat = Vector3.new(root.Position.X - origin.X, 0, root.Position.Z - origin.Z).Magnitude
 	if flat > settings.rangeStuds + settings.rangeSlackStuds then
 		return
 	end

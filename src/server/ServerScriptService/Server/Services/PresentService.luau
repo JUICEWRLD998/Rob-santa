@@ -169,8 +169,11 @@ local function tryGrab(player: Player, present: Present)
 	if (root.Position - present.box.Position).Magnitude > maxDistance then
 		return
 	end
-	-- 4.2: only owners of a zone can take its loot, even if they got past the barrier somehow.
-	if not ZoneService:OwnsZone(player, present.zone) then
+	-- 4.2: only owners of a zone can take its resting loot, even if they got past the barrier somehow.
+	-- 7.1: a DROPPED present is anyone's (section 9: a snowball knocks a Zone 3 present loose in the
+	-- Town, and the thrower may take it even without Zone 3). Before this, the prompt showed and the
+	-- grab silently did nothing.
+	if present.state == "Resting" and not ZoneService:OwnsZone(player, present.zone) then
 		return
 	end
 	local list = carriedBy[player]
